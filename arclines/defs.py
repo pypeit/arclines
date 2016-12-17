@@ -21,8 +21,8 @@ def instruments():
     #
     return instr_dict
 
-def lamps():
-    """ Dict of lamps included in this database
+def lines():
+    """ Dict of lines included in this database
     WARNING: Modifying any of the following is a *bad* idea
       Adding is ok
 
@@ -31,15 +31,15 @@ def lamps():
     lamp_dict : dict
 
     """
-    lamp_dict = {}
+    line_dict = {}
     #
-    lamp_dict['ArI'] = 2**0
-    lamp_dict['HgI'] = 2**1
-    lamp_dict['KrI'] = 2**2
-    lamp_dict['NeI'] = 2**3
-    lamp_dict['XeI'] = 2**4
+    line_dict['ArI'] = 2**0
+    line_dict['HgI'] = 2**1
+    line_dict['KrI'] = 2**2
+    line_dict['NeI'] = 2**3
+    line_dict['XeI'] = 2**4
     #
-    return lamp_dict
+    return line_dict
 
 
 def str_len():

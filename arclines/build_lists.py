@@ -3,16 +3,20 @@
 from __future__ import (print_function, absolute_import, division, unicode_literals)
 
 import numpy as np
+import os
 import pdb
 
 from collections import OrderedDict
+import datetime
 
-from astropy.table import Table
+from astropy.table import Table, vstack
 
 from arclines import io as arcl_io
 from arclines import load_source
 from arclines import defs
 
+import arclines # For path
+llist_path = arclines.__path__[0]+'/data/lists/'
 
 def init_line_list():
     """ Initialize a Table for a linelist
@@ -41,8 +45,9 @@ def init_line_list():
     idict = OrderedDict()
     idict['ion'] = dummy_line
     idict['wave'] = 0.
-    idict['NIST'] = 1
-    idict['amplitude'] = 1.
+    idict['NIST'] = 0
+    idict['Instr'] = 0  # Flag for instrument
+    idict['amplitude'] = 0
     idict['Source'] = dummy_src
 
     # Table
@@ -54,7 +59,52 @@ def init_line_list():
     return init_tbl
 
 
-def master_build(check_only=True):
+def create_line_list(line_tbl, source_file, instr, outfile,
+                     unknown=False, ions=None):
+    """
+    Parameters
+    ----------
+    line_tbl
+    source_file : str
+    instr : str
+      Converted to a flag
+    outfile
+
+    """
+    from arclines import defs
+
+    str_len_dict = defs.str_len()
+    # Init -- Mainly to insure formatting
+    ini_tbl = init_line_list()
+    # Add instrument flag
+    line_tbl['Instr'] = defs.instruments()[instr]
+    # Add source
+    source = np.array([source_file]*len(line_tbl),
+                    dtype='S{:d}'.format(str_len_dict['Source']))
+    line_tbl['Source'] = source
+    # Stack
+    new_tbl = vstack([ini_tbl, line_tbl], join_type='exact')
+    # Cut off first line
+    cut_tbl = new_tbl[1:]
+    # Format
+    cut_tbl['wave'].format = '10.4f'
+    # Unknown list??
+    if unknown:
+        if ions is None:
+            raise IOError("Must provide list of possible ions if unknown")
+        line_dict = defs.lines()
+        line_flag = 0
+        for uion in ions:
+            line_flag += line_dict[uion]
+        cut_tbl['line_flag'] = line_flag
+
+    # Write
+    with open(outfile,'w') as f:
+        f.write('#Creation Date: {:s}\n'.format(str(datetime.date.today().strftime('%Y-%b-%d'))))
+        cut_tbl.write(f, format='ascii.fixed_width')
+
+
+def master_build(write=False):
     """ Master loop to build the line lists
 
     Parameters
@@ -68,5 +118,30 @@ def master_build(check_only=True):
     # Loop on sources
     for source in sources:
         # Load line table
-        load_source.load(source['File'], source['Format'])
+        ID_lines, U_lines = load_source.load(source['File'], source['Format'])
+        # Loop on ID ions
+        uions = np.unique(ID_lines['ion'].data)
+        for ion in uions:
+            # Parse
+            idx = ID_lines['ion'] == ion
+            sub_tbl = ID_lines[idx]
+            # Generate?
+            ion_file = llist_path+'{:s}_lines.dat'.format(ion)
+            if not os.path.isfile(ion_file):
+                if not write:
+                    print("Would generate line list:\n   {:s}".format(ion_file))
+                else:
+                    print("Generating line list:\n   {:s}".format(ion_file))
+                    create_line_list(sub_tbl, source['File'],
+                                 source['Instr'], ion_file)
+        # UNKNWN lines
+        if U_lines is None:
+            continue
+        unk_file = llist_path+'UNKNWN_lines.dat'
+        if not os.path.isfile(unk_file):
+            print("Generating line list:\n   {:s}".format(unk_file))
+            create_line_list(U_lines, source['File'], source['Instr'],
+                             unk_file, unknown=True, ions=uions)
+
+
 

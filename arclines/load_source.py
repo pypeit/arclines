@@ -4,6 +4,7 @@ from __future__ import (print_function, absolute_import, division, unicode_liter
 
 import numpy as np
 import json
+import pdb
 
 from astropy.table import Table
 
@@ -14,7 +15,7 @@ src_path = arclines.__path__[0]+'/data/sources/'
 from arclines import defs
 str_len_dict = defs.str_len()
 instr_dict = defs.instruments()
-lamp_dict = defs.lamps()
+line_dict = defs.lines()
 
 def load(src_file, format):
     """
@@ -34,6 +35,9 @@ def load(src_file, format):
         raise IOError("Format {:s} for source {:s} is not supported".format(
                 format, src_file))
     # Reject lines
+
+    # Return
+    return ID_lines, U_lines
 
 
 def load_pypit(version, src_file):
@@ -69,16 +73,10 @@ def load_pypit(version, src_file):
     amps = []
     for jj,xfit in enumerate(pypit_fit['xfit']):
         pix = int(np.round(xfit*(npix-1)))
-        amps.append(pypit_fit['spec'][pix])
+        amps.append(int(pypit_fit['spec'][pix]))
     ID_lines['amplitude'] = amps
 
     # Unknown
-    # Generate the flag
-    uni_ions = np.unique(ions)
-    ion_flag = 0
-    for uion in uni_ions:
-        ion_flag += lamp_dict[uion]
-
     # Use PYPIT to decode
     wave = arutils.func_val(pypit_fit['fitc'],
                             np.array(pypit_fit['tcent'])/(npix-1),
@@ -89,12 +87,12 @@ def load_pypit(version, src_file):
         if np.min(np.abs(ID_lines['wave'].data-iwave)) > 0.5:
             extras.append(iwave)
             pix = int(np.round(pypit_fit['tcent'][kk]))
-            eamps.append(pypit_fit['spec'][pix])
+            eamps.append(int(pypit_fit['spec'][pix]))
     U_lines = Table()
-    U_lines['ion'] = str('UNKWN').rjust(str_len_dict['ion'])
     U_lines['wave'] = extras
+    U_lines['ion'] = str('UNKNWN').rjust(str_len_dict['ion'])
     U_lines['NIST'] = 0
-    U_lines['ion_flag'] = ion_flag
+    U_lines['amplitude'] = eamps
     # Return
     return ID_lines, U_lines
 

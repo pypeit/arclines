@@ -1,0 +1,11 @@
+#Creation Date: 2016-Dec-17
+| ion |       wave | NIST | Instr | amplitude |                    Source |
+| KrI |  5872.5432 |    1 |     1 |       741 | lrisr_600_7500_PYPIT.json |
+| KrI |  7589.5025 |    1 |     1 |     23900 | lrisr_600_7500_PYPIT.json |
+| KrI |  7603.6384 |    1 |     1 |     64387 | lrisr_600_7500_PYPIT.json |
+| KrI |  7696.6579 |    1 |     1 |     11908 | lrisr_600_7500_PYPIT.json |
+| KrI |  7856.9844 |    1 |     1 |     14382 | lrisr_600_7500_PYPIT.json |
+| KrI |  8192.3082 |    1 |     1 |     39171 | lrisr_600_7500_PYPIT.json |
+| KrI |  8300.3907 |    1 |     1 |     64396 | lrisr_600_7500_PYPIT.json |
+| KrI |  8511.2106 |    1 |     1 |     11634 | lrisr_600_7500_PYPIT.json |
+| KrI |  8779.1607 |    1 |     1 |     64346 | lrisr_600_7500_PYPIT.json |
