@@ -150,7 +150,7 @@ def update_line_list(new_lines, source_file, instr, line_file,
             if write is False:
                 print("Would add the following line to {:s}".format(line_file))
                 print(line)
-            line_list.add_row(line)
+            line_list = vstack([line_list, line]) # Insures columns are matched
             updated = True
         elif len(mtch_wave) == 1:
             idx = mtch_wave[0]
@@ -160,14 +160,14 @@ def update_line_list(new_lines, source_file, instr, line_file,
                 print(line_list[idx])
                 pdb.set_trace()
             else:  # Check instrument
-                if (line_list['Instr'][idx] % 2*line['Instr']) >= line['Instr']:
+                if (line_list['Instr'][idx] % (2*line['Instr'])) >= line['Instr']:
                     pass
                 else:
+                    pdb.set_trace()   # Check this the first time
                     line_list['Instr'][idx] += line['Instr']
                     if write is False:
                         print("Would update instrument in this line:")
                         print(line_list[idx])
-                    pdb.set_trace()   # Check this the first time
                     updated = True
     # Sort
     line_list.sort('wave')
