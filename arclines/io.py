@@ -11,8 +11,9 @@ def load_line_list(line_file, add_path=False):
     """
     Parameters
     ----------
-    line_file
-    add_path
+    line_file : str
+    add_path : bool, optional
+      Not yet implemented
 
     Returns
     -------
