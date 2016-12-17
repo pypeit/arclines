@@ -92,8 +92,6 @@ def create_line_list(line_tbl, source_file, instr, outfile,
     outfile
 
     """
-    from arclines import defs
-
     # Init -- Mainly to insure formatting
     ini_tbl = init_line_list()
     # Add columns (in place)
@@ -102,8 +100,7 @@ def create_line_list(line_tbl, source_file, instr, outfile,
     new_tbl = vstack([ini_tbl, line_tbl], join_type='exact')
     # Cut off first line
     cut_tbl = new_tbl[1:]
-    # Format
-    cut_tbl['wave'].format = '10.4f'
+
     # Unknown list??
     if unknown:
         if ions is None:
@@ -119,46 +116,64 @@ def create_line_list(line_tbl, source_file, instr, outfile,
 
 
 def update_line_list(new_lines, source_file, instr, line_file,
-                     unknown=False, ions=None):
-    """
+                     tol_wave=0.1, NIST_tol=0.0001, write=False):
+    """ Update/add to lines in line list as applicable
+    Not for use on UNKNWN lines
+
     Parameters
     ----------
     line_tbl
     source_file : str
     instr : str
       Converted to a flag
+    tol_wave : float, optional
+      Matching tolerance in wavelength
+      Anything closer than this, even if real, is trouble
     outfile
 
     """
-    from arclines import defs
-    str_len_dict = defs.str_len()
     # Load
     line_list = arcl_io.load_line_list(line_file)
+    # Add columns (in place)
+    add_instr_source(new_lines, instr, source_file)
 
-    # Add instrument flag
-    new_lines['Instr'] = defs.instruments()[instr]
-    # Add source
-    source = np.array([source_file]*len(new_lines),
-                    dtype='S{:d}'.format(str_len_dict['Source']))
-    new_lines['Source'] = source
-    # Stack
-    new_tbl = vstack([ini_tbl, line_tbl], join_type='exact')
-    # Cut off first line
-    cut_tbl = new_tbl[1:]
-    # Format
-    cut_tbl['wave'].format = '10.4f'
-    # Unknown list??
-    if unknown:
-        if ions is None:
-            raise IOError("Must provide list of possible ions if unknown")
-        line_dict = defs.lines()
-        line_flag = 0
-        for uion in ions:
-            line_flag += line_dict[uion]
-        cut_tbl['line_flag'] = line_flag
-
+    # Loop to my loop
+    updated = False
+    for line in new_lines:
+        # NIST
+        if line['NIST'] != 1:
+            print("Not ready for this")
+            pdb.set_trace()
+        # Search for wavelength match within tolerance
+        mtch_wave = np.where(np.abs(line_list['wave']-line['wave']) < tol_wave)[0]
+        if len(mtch_wave) == 0:
+            if write is False:
+                print("Would add the following line to {:s}".format(line_file))
+                print(line)
+            line_list.add_row(line)
+            updated = True
+        elif len(mtch_wave) == 1:
+            idx = mtch_wave[0]
+            if np.abs(line_list['wave'][idx]-line['wave']) > NIST_tol:
+                print("Bad match for a NIST line")
+                print(line)
+                print(line_list[idx])
+                pdb.set_trace()
+            else:  # Check instrument
+                if (line_list['Instr'][idx] % 2*line['Instr']) >= line['Instr']:
+                    pass
+                else:
+                    line_list['Instr'][idx] += line['Instr']
+                    if write is False:
+                        print("Would update instrument in this line:")
+                        print(line_list[idx])
+                    pdb.set_trace()   # Check this the first time
+                    updated = True
+    # Sort
+    line_list.sort('wave')
     # Write
-    arcl_io.write_line_list(cut_tbl, line_file)
+    if write and updated:
+        arcl_io.write_line_list(line_list, line_file)
 
 def master_build(write=False):
     """ Master loop to build the line lists

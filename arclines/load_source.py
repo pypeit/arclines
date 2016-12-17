@@ -53,7 +53,7 @@ def load_pypit(version, src_file):
     -------
     ID_lines : Table
       Table of arc lines with IDs
-    U_lines
+    U_lines : Table or None
       Additional lines
 
     """
@@ -88,11 +88,14 @@ def load_pypit(version, src_file):
             extras.append(iwave)
             pix = int(np.round(pypit_fit['tcent'][kk]))
             eamps.append(int(pypit_fit['spec'][pix]))
-    U_lines = Table()
-    U_lines['wave'] = extras
-    U_lines['ion'] = str('UNKNWN').rjust(str_len_dict['ion'])
-    U_lines['NIST'] = 0
-    U_lines['amplitude'] = eamps
+    if len(extras) == 0:
+        U_lines = None
+    else:
+        U_lines = Table()
+        U_lines['wave'] = extras
+        U_lines['ion'] = str('UNKNWN').rjust(str_len_dict['ion'])
+        U_lines['NIST'] = 0
+        U_lines['amplitude'] = eamps
     # Return
     return ID_lines, U_lines
 
