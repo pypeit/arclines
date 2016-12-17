@@ -10,6 +10,7 @@ def load_sources():
 
     Returns
     -------
+    sources : Table
 
     """
     import arclines # For path
