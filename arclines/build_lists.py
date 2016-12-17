@@ -9,12 +9,12 @@ from collections import OrderedDict
 
 from astropy.table import Table
 
-import arclines  # For path
 from arclines import io as arcl_io
 from arclines import load_source
+from arclines import defs
 
 
-def init_line_list(len_src=30):
+def init_line_list():
     """ Initialize a Table for a linelist
     Rigidly enforces table column formats
     Strings are the most annoying
@@ -24,23 +24,26 @@ def init_line_list(len_src=30):
     init_tbl : Table
       One dummy row
     """
+    # Get str lengths from defs
+    len_line = defs.str_len()['ion']
+    len_src = defs.str_len()['Source']
     # Load sources to check
     sources = arcl_io.load_source_table()
     src_files = sources['File'].data
     if src_files.dtype.itemsize > len_src:
-        raise ValueError("Sources now exceeds table.  Should fix source")
+        raise ValueError("Sources now exceeds table.  Should fix source name")
     dummy_src = str('#')*len_src
-    # Ion in Lamp
-    dummy_ion = str('#')*5
+    # Arc Line name
+    dummy_line = str('#')*len_line
     #
 
     # Dict for Table
     idict = OrderedDict()
-    idict['ion']=dummy_ion
+    idict['ion'] = dummy_line
     idict['wave'] = 0.
-    idict['NIST']=1
-    idict['amplitude']=1.
-    idict['Source']=dummy_src
+    idict['NIST'] = 1
+    idict['amplitude'] = 1.
+    idict['Source'] = dummy_src
 
     # Table
     tkeys = idict.keys()
@@ -65,8 +68,5 @@ def master_build(check_only=True):
     # Loop on sources
     for source in sources:
         # Load line table
-        if source['Format'] == 'PYPIT1':
-            load_source.pypit(1,)
-        else:
-            raise IOError("Format {:s} for source {:s} is not supporrted".format(
-                source['Format'], source['File']))
+        load_source.load(source['File'], source['Format'])
+
