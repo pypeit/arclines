@@ -1,11 +1,11 @@
-""" Module for I/O in arclines
+""" Module for loading source files
 """
 from __future__ import (print_function, absolute_import, division, unicode_literals)
 
 from astropy.table import Table
 
 
-def load_source_table():
+def load_sources():
     """ Load table of arcline sources
 
     Returns

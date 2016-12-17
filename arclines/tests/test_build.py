@@ -7,15 +7,15 @@ import pytest
 
 from astropy.table import Table
 
-from arclines import io as arcl_io
+from arclines import build_lists
 
 #def data_path(filename):
 #    data_dir = os.path.join(os.path.dirname(__file__), 'files')
 #    return os.path.join(data_dir, filename)
 
 
-def test_load_sources():
-    sources = arcl_io.load_source_table()
-    # Test
-    assert isinstance(sources, Table)
+def test_init_line_list():
+    init_tbl = build_lists.init_line_list()
+    #
+    assert len(init_tbl) == 1
 
