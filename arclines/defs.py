@@ -18,6 +18,7 @@ def instruments():
     instr_dict = {}
     #
     instr_dict['LRISr'] = 2**0
+    instr_dict['LRISb'] = 2**1
     #
     return instr_dict
 
@@ -38,6 +39,8 @@ def lines():
     line_dict['KrI'] = 2**2
     line_dict['NeI'] = 2**3
     line_dict['XeI'] = 2**4
+    line_dict['CdI'] = 2**5
+    line_dict['ZnI'] = 2**6
     #
     return line_dict
 

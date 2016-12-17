@@ -7,7 +7,6 @@ import os
 import pdb
 
 from collections import OrderedDict
-import datetime
 
 from astropy.table import Table, vstack
 
@@ -59,6 +58,28 @@ def init_line_list():
     return init_tbl
 
 
+def add_instr_source(line_tbl, instr, source_file):
+    """
+    Parameters
+    ----------
+    tbl
+    instr
+    source_file
+
+    Returns
+    -------
+    Modified in place
+
+    """
+    str_len_dict = defs.str_len()
+    # Add instrument flag
+    line_tbl['Instr'] = defs.instruments()[instr]
+    # Add source
+    source = np.array([source_file]*len(line_tbl),
+                      dtype='S{:d}'.format(str_len_dict['Source']))
+    line_tbl['Source'] = source
+
+
 def create_line_list(line_tbl, source_file, instr, outfile,
                      unknown=False, ions=None):
     """
@@ -73,15 +94,10 @@ def create_line_list(line_tbl, source_file, instr, outfile,
     """
     from arclines import defs
 
-    str_len_dict = defs.str_len()
     # Init -- Mainly to insure formatting
     ini_tbl = init_line_list()
-    # Add instrument flag
-    line_tbl['Instr'] = defs.instruments()[instr]
-    # Add source
-    source = np.array([source_file]*len(line_tbl),
-                    dtype='S{:d}'.format(str_len_dict['Source']))
-    line_tbl['Source'] = source
+    # Add columns (in place)
+    add_instr_source(line_tbl, instr, source_file)
     # Stack
     new_tbl = vstack([ini_tbl, line_tbl], join_type='exact')
     # Cut off first line
@@ -99,10 +115,50 @@ def create_line_list(line_tbl, source_file, instr, outfile,
         cut_tbl['line_flag'] = line_flag
 
     # Write
-    with open(outfile,'w') as f:
-        f.write('#Creation Date: {:s}\n'.format(str(datetime.date.today().strftime('%Y-%b-%d'))))
-        cut_tbl.write(f, format='ascii.fixed_width')
+    arcl_io.write_line_list(cut_tbl, outfile)
 
+
+def update_line_list(new_lines, source_file, instr, line_file,
+                     unknown=False, ions=None):
+    """
+    Parameters
+    ----------
+    line_tbl
+    source_file : str
+    instr : str
+      Converted to a flag
+    outfile
+
+    """
+    from arclines import defs
+    str_len_dict = defs.str_len()
+    # Load
+    line_list = arcl_io.load_line_list(line_file)
+
+    # Add instrument flag
+    new_lines['Instr'] = defs.instruments()[instr]
+    # Add source
+    source = np.array([source_file]*len(new_lines),
+                    dtype='S{:d}'.format(str_len_dict['Source']))
+    new_lines['Source'] = source
+    # Stack
+    new_tbl = vstack([ini_tbl, line_tbl], join_type='exact')
+    # Cut off first line
+    cut_tbl = new_tbl[1:]
+    # Format
+    cut_tbl['wave'].format = '10.4f'
+    # Unknown list??
+    if unknown:
+        if ions is None:
+            raise IOError("Must provide list of possible ions if unknown")
+        line_dict = defs.lines()
+        line_flag = 0
+        for uion in ions:
+            line_flag += line_dict[uion]
+        cut_tbl['line_flag'] = line_flag
+
+    # Write
+    arcl_io.write_line_list(cut_tbl, line_file)
 
 def master_build(write=False):
     """ Master loop to build the line lists
@@ -134,6 +190,9 @@ def master_build(write=False):
                     print("Generating line list:\n   {:s}".format(ion_file))
                     create_line_list(sub_tbl, source['File'],
                                  source['Instr'], ion_file)
+            else:
+                update_line_list(sub_tbl, source['File'],
+                                 source['Instr'], ion_file, write=write)
         # UNKNWN lines
         if U_lines is None:
             continue
