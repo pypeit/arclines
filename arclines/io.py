@@ -107,9 +107,8 @@ def load_unknown_list(lines, unknwn_file=None):
     msk = np.array([False]*len(line_list))
     for line in lines:
         line_flag = line_dict[line]
-        match = line_list['line_flag'] % 2*line_flag >= line_flag
+        match = line_list['line_flag'] % (2*line_flag) >= line_flag
         msk[match] = True
-        pdb.set_trace()
     # Finish
     return line_list[msk]
 

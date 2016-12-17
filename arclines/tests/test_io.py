@@ -14,9 +14,12 @@ from arclines import io as arcl_io
 #    return os.path.join(data_dir, filename)
 
 
+
 def test_load_line_lists():
     line_lists = arcl_io.load_line_lists(['HgI','ZnI'])
-    pytest.set_trace()
+    # Unknown
+    line_lists = arcl_io.load_line_lists(['HgI','ZnI'], unknown=True)
+
 
 def test_load_line_list():
     import arclines
