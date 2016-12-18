@@ -48,7 +48,11 @@ def grade_fidx_results(fidx):
         # Score
         if (ntruth == nmatch) & (nmatch >= 4):
             grades['nPerf'] += 1
-        elif (ntruth >= (nmatch-2)) & (nmatch >= 6):
+        elif nmatch == 0:
+            grades['nAmb'] += 1
+        elif (ntruth == 4) & (nmatch == 5):
+            grades['nGood'] += 1
+        elif (ntruth/nmatch >= 2./3) & (nmatch >= 6):
             grades['nGood'] += 1
         elif (ntruth == 3) & (nmatch == 3):
             grades['nGood'] += 1
@@ -56,9 +60,10 @@ def grade_fidx_results(fidx):
             grades['nOK'] += 1
         elif (ntruth == 2) & (nmatch == 2):
             grades['nRisk'] += 1
-        elif (nmatch >= 4) & (max_bad >= 3) & (max_bad >= ntruth):
+        elif (nmatch >= 3) & (max_bad >= 3) & (max_bad > ntruth):
             grades['nFail'] += 1
-            pdb.set_trace()
+            #print(fidx[key])
+            #pdb.set_trace()
         elif (nmatch in [2,3]) & (max_bad >= 2):
             grades['nFail'] += 1
         else:
@@ -83,12 +88,30 @@ def test_quad_match_with_lowredux(low_redux_hdf, instr, swv_uncertainty=200.):
         wvdata = cut_llist['wave'].data
         # Add a key missing line
         #wvdata = np.append(wvdata, [3404.6978])
-        #wvdata = np.append(wvdata, [3132.0, 3404.6978, 4350.6])
         # Sort
         wvdata.sort()
         #
         disp = 1.26  # Ang/binned pix
         pix_tol = 2
+        cut_choice = 2  # 0 might be a touch better..
+    elif instr == 'LRISr':
+        #llist = arcl_io.load_line_lists(['ArI','HgI','KrI','NeI','XeI'], unknown=True)
+        llist = arcl_io.load_line_lists(['ArI','HgI','NeI'], unknown=True)  # No Kr or Xe in LowRedux
+        # Cut
+        gdwv = (llist['wave'] > 5600.) & (llist['wave'] < 9000.)  # WILL WANT TO EXTEND
+        cut_llist = llist[gdwv]
+        #
+        wvdata = cut_llist['wave'].data
+        # Add a key missing line
+        #wvdata = np.append(wvdata, [3404.6978])
+        # Sort
+        wvdata.sort()
+        #
+        disp = 1.6  # Ang/binned pix
+        pix_tol = 1
+        cut_choice = 2  # ARBITRARY
+    else:
+        raise IOError("Not ready for this instrument")
 
     # Open
     hdf = h5py.File(low_redux_hdf,'r')
@@ -114,13 +137,15 @@ def test_quad_match_with_lowredux(low_redux_hdf, instr, swv_uncertainty=200.):
             pix = int(np.round(itc))
             amps.append(spec[pix])
         amps = np.array(amps)
+
         # Trim tcent on amplitude
-        cut_choice = 0  # ARBITRARY
         if cut_choice == 0:
             cut_amp = amps > 1000.
         elif cut_choice == 1:
             mxa = np.max(amps)
             cut_amp = amps > 0.2*mxa
+        elif cut_choice == 2:
+            cut_amp = amps > 500.
         tcent = all_tcent[cut_amp]
         nlin = tcent.size
 
@@ -134,7 +159,7 @@ def test_quad_match_with_lowredux(low_redux_hdf, instr, swv_uncertainty=200.):
             mtw = np.where(np.abs(wvdata-wave[widx]) < 2*disp)[0]  # Catches bad LRISb line
             if len(mtw) == 0:
                 #if wave[widx] < 5600:
-                #    print("No match for index={:d}, wave={:g}, amp={:g}".format( ii,wave[widx],spec[widx]))
+                #print("No match for index={:d}, wave={:g}, amp={:g}".format( ii,wave[widx],spec[widx]))
                 final_idx[ii]['truth'] = -1
             elif len(mtw) == 1:
                 final_idx[ii]['truth'] = mtw[0]
@@ -185,22 +210,29 @@ def test_quad_match_with_lowredux(low_redux_hdf, instr, swv_uncertainty=200.):
             ispec, grades['ndetect'], grades['nPerf'], grades['nGood'], grades['nOK'],
             grades['nRisk'], grades['nAmb'], grades['nFail'],
                 twv_min))
-        #if ispec == 10:
-        #    xdb.set_trace()
+        if ispec == 17:
+            xdb.set_trace()
     xdb.set_trace()
 
 
 def main(flg_tst):
+    import arclines
+    test_arc_path = arclines.__path__[0]+'/data/test_arcs/'
 
-    # Load JSON for DR5
+    # Test on LRISb_600
     if (flg_tst % 2**1) >= 2**0:
-        hdf_file = os.getenv('DROPBOX_DIR')+'/PYPIT/Holy_Grail/LRISb_600.hdf5'
+        hdf_file = test_arc_path+'LRISb_600.hdf5'  # Create with low_redux.py if needed
         test_quad_match_with_lowredux(hdf_file, 'LRISb')
+    # Test on LRISr_600
+    if (flg_tst % 2**2) >= 2**1:
+        hdf_file = test_arc_path+'LRISr_600_7500.hdf5'  # Create with low_redux.py if needed
+        test_quad_match_with_lowredux(hdf_file, 'LRISr')
 
 
 # Test
 if __name__ == '__main__':
     flg_tst = 0
     flg_tst += 2**0   # LRISb 600
+    #flg_tst += 2**1   # LRISr 600
 
     main(flg_tst)
