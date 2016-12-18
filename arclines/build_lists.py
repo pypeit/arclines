@@ -163,7 +163,6 @@ def update_line_list(new_lines, source_file, instr, line_file,
                 if (line_list['Instr'][idx] % (2*line['Instr'])) >= line['Instr']:
                     pass
                 else:
-                    pdb.set_trace()   # Check this the first time
                     line_list['Instr'][idx] += line['Instr']
                     if write is False:
                         print("Would update instrument in this line:")
