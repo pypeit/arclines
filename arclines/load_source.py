@@ -133,8 +133,8 @@ def load_pypit(version, src_file, plot=False, **kwargs):
     return ID_lines, U_lines
 
 
-def load_low_redux(version, src_file, plot=False, min_hist=8,
-                   cut_amp_val=None, wvmnx=[0., 1e9], ions=None):
+def load_low_redux(version, src_file, plot=False, min_hist=10,
+                   cut_amp_val=400., wvmnx=[0., 1e9], ions=None):
     """
     Parameters
     ----------
@@ -167,6 +167,7 @@ def load_low_redux(version, src_file, plot=False, min_hist=8,
 
     # Loop on spec
     extras = []
+    eamps = []
     for ispec in range(mdict['nspec']):
         spec = hdf['arcs/'+str(ispec)+'/spec'].value
         wave = hdf['arcs/'+str(ispec)+'/wave'].value # vacuum
@@ -185,20 +186,79 @@ def load_low_redux(version, src_file, plot=False, min_hist=8,
             amps.append(np.max(spec[pix-1:pix+2]))
         amps = np.array(amps)
 
-        # Trim tcent on amplitude?
-        if cut_amp_val is not None:
-            cut_amp = amps > cut_amp_val  # 500.
-            tcent = all_tcent[cut_amp]
-        else:
-            tcent = all_tcent
+        # Trim tcent on amplitude
+        cut_amp = amps > cut_amp_val  # 500.
+        tcent = all_tcent[cut_amp]
         nlin = tcent.size
 
         # init with Truth
         for ii in range(nlin):
-            wvt = fwv(tcent[ii])
-            mtw = np.where(np.abs(wvdata-wvt) < 2*disp)[0]  # Catches bad LRISb line
+            wvt = float(fwv(tcent[ii]))
+            mtw = np.where(np.abs(wvdata-wvt) < 4*disp)[0]  # Deals with bad wavelength solutions
             if len(mtw) == 0:
                 if (wvt > wvmnx[0]) & (wvt < wvmnx[1]): # LRISb only
                     extras.append(wvt)
-    pdb.set_trace()
+                    eamps.append(amps[ii])
+    # Repackage
+    extras = np.array(extras)
+    isort = np.argsort(extras)
+    extras = extras[isort]
+    eamps = np.array(eamps)[isort]
+    # Group -- Super-crude friends of friends
+    final_extras = []
+    final_amps = []
+    cnt = 0
+    while cnt <= extras.size:
+        # First try
+        ingroup = np.abs(extras-extras[cnt]) < 2*disp
+        for ii in range(3):  # For some convergence
+            # Median
+            mngroup = np.median(extras[ingroup])
+            ingroup = np.abs(extras-mngroup) < 2*disp
+        if np.sum(ingroup) > min_hist:
+            final_extras.append(np.median(extras[ingroup]))
+            final_amps.append(np.median(eamps[ingroup]))
+        # Step
+        newe = mngroup + 5*disp
+        gdcnt = np.where(extras > newe)[0]
+        if len(gdcnt) == 0:
+            break
+        else:
+            cnt = gdcnt[0]
+
+    # Plot??
+    if plot:
+        # Find the best spectrum
+        max_nex = 0
+        for ispec in range(mdict['nspec']):
+            spec = hdf['arcs/'+str(ispec)+'/spec'].value
+            wave = hdf['arcs/'+str(ispec)+'/wave'].value # vacuum
+            minwv, maxwv = np.min(wave), np.max(wave)
+            nex = np.sum((final_extras>minwv) & (final_extras<maxwv))
+            if nex > max_nex:
+                svi = ispec
+                max_nex = nex
+        # Find pixel values
+        spec = hdf['arcs/'+str(svi)+'/spec'].value
+        wave = hdf['arcs/'+str(svi)+'/wave'].value # vacuum
+        npix = wave.size
+        fpix = interp1d(wave, np.arange(npix))#, kind='cubic')
+        pextras = dict(x=fpix(final_extras), IDs=[])
+        for fex in final_extras:
+            pextras['IDs'].append('UNKNWN {:.4f}'.format(fex))
+        # Plot
+        arcl_plots.arc_ids(spec, [], [],
+                           src_file.replace('.hdf5', '.pdf'),
+                           title=src_file.replace('.hdf5', ''),
+                           extras=pextras)
+    # Table
+    U_lines = Table()
+    U_lines['wave'] = final_extras
+    U_lines['ion'] = str('UNKNWN').rjust(str_len_dict['ion'])
+    U_lines['NIST'] = 0
+    U_lines['amplitude'] = final_amps
+
+    # Return
+    return None, U_lines
+
 

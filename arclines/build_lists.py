@@ -330,29 +330,32 @@ def master_build(write=False, nsources=None, plots=True):
                                              ions=source['Lines'].split(','),
                                              plot=plots, wvmnx=[source['wvmin'], source['wvmax']])
         # Lines (Double check)
-        uions = np.unique(ID_lines['ion'].data)
         src_lines = source['Lines'].split(',')
-        for src_line in src_lines:
-            if src_line not in uions.tolist():
-                raise ValueError("Line {:s} not found in ID_lines".format(src_line))
-        # Check
-        # Loop on ID ions
-        for ion in uions:
-            # Parse
-            idx = ID_lines['ion'] == ion
-            sub_tbl = ID_lines[idx]
-            # Generate?
-            ion_file = llist_path+'{:s}_lines.dat'.format(ion)
-            if not os.path.isfile(ion_file):
-                if not write:
-                    print("Would generate line list:\n   {:s}".format(ion_file))
+        if ID_lines is None:
+            uions = src_lines
+        else:
+            # Check
+            uions = np.unique(ID_lines['ion'].data)
+            for src_line in src_lines:
+                if src_line not in uions.tolist():
+                    raise ValueError("Line {:s} not found in ID_lines".format(src_line))
+            # Loop on ID ions
+            for ion in uions:
+                # Parse
+                idx = ID_lines['ion'] == ion
+                sub_tbl = ID_lines[idx]
+                # Generate?
+                ion_file = llist_path+'{:s}_lines.dat'.format(ion)
+                if not os.path.isfile(ion_file):
+                    if not write:
+                        print("Would generate line list:\n   {:s}".format(ion_file))
+                    else:
+                        print("Generating line list:\n   {:s}".format(ion_file))
+                        create_line_list(sub_tbl, source['File'],
+                                     source['Instr'], ion_file)
                 else:
-                    print("Generating line list:\n   {:s}".format(ion_file))
-                    create_line_list(sub_tbl, source['File'],
-                                 source['Instr'], ion_file)
-            else:
-                update_line_list(sub_tbl, source['File'],
-                                 source['Instr'], ion_file, write=write)
+                    update_line_list(sub_tbl, source['File'],
+                                     source['Instr'], ion_file, write=write)
         # UNKNWN lines
         if U_lines is None:
             continue

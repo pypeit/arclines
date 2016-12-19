@@ -2,4 +2,4 @@
 | lrisr_600_7500_PYPIT.json  | JXP    | 17-Dec-2016 | LRISr  | ArI,HgI,KrI,NeI,XeI | 5700. | 8900. | PYPIT1 |
 | lrisb_600_4000_PYPIT.json  | JXP    | 17-Dec-2016 | LRISb  | CdI,HgI,ZnI         | 3100. | 5500. | PYPIT1 |
 | kastb_600_PYPIT.json       | JXP    | 17-Dec-2016 | Kastb  | CdI,HeI,HgI         | 3400. | 5500. | PYPIT1 |
-| LRISb_600_LRX.hdf5         | JXP    | 19-Dec-2016 | LRISb  | CdI,HeI,HgI         | 3000. | 5500. | LRDX1  |
+| LRISb_600_LRX.hdf5         | JXP    | 19-Dec-2016 | LRISb  | CdI,HgI,ZnI         | 3250. | 5500. | LRDX1  |
