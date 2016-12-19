@@ -120,6 +120,7 @@ def test_quad_match_with_lowredux(low_redux_hdf, instr, swv_uncertainty=200.):
         mdict[key] = hdf['meta'][key].value
 
     # Loop on spec
+    extras = []
     for ispec in range(mdict['nspec']):
         all_tcent = hdf['arcs/'+str(ispec)+'/pixpk'].value
 
@@ -158,8 +159,9 @@ def test_quad_match_with_lowredux(low_redux_hdf, instr, swv_uncertainty=200.):
             widx = int(np.round(tcent[ii]))
             mtw = np.where(np.abs(wvdata-wave[widx]) < 2*disp)[0]  # Catches bad LRISb line
             if len(mtw) == 0:
-                #if wave[widx] < 5600:
-                #print("No match for index={:d}, wave={:g}, amp={:g}".format( ii,wave[widx],spec[widx]))
+                if (instr=='LRISb') & (wave[widx] < 5600): # LRISb only
+                    extras.append(wave[widx])
+                #    print("No match for index={:d}, wave={:g}, amp={:g}".format( ii,wave[widx],spec[widx]))
                 final_idx[ii]['truth'] = -1
             elif len(mtw) == 1:
                 final_idx[ii]['truth'] = mtw[0]
@@ -169,7 +171,7 @@ def test_quad_match_with_lowredux(low_redux_hdf, instr, swv_uncertainty=200.):
                 else:
                     pdb.set_trace()
         #
-        for idx in range(nlin-5):
+        for idx in range(nlin-4):
             for jj in range(4):
                 sub_idx = idx + np.arange(5).astype(int)
                 msk = np.array([True]*5)
@@ -213,8 +215,10 @@ def test_quad_match_with_lowredux(low_redux_hdf, instr, swv_uncertainty=200.):
             ispec, grades['ndetect'], grades['nPerf'], grades['nGood'], grades['nOK'],
             grades['nRisk'], grades['nAmb'], grades['nFail'],
                 twv_min))
-        #if ispec == 17:
+        #if ispec == 1:
         #    xdb.set_trace()
+    extras = np.array(extras)
+    extras.sort()
     xdb.set_trace()
 
 
