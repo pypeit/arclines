@@ -175,6 +175,117 @@ def update_line_list(new_lines, source_file, instr, line_file,
         arcl_io.write_line_list(line_list, line_file)
 
 
+def update_uline_list(new_lines, source_file, instr, line_file,
+                     tol_wave=0.1, NIST_tol=0.0001, write=False):
+    """ Update/add to UNKNWN line list as applicable
+
+    Parameters
+    ----------
+    line_tbl
+    source_file : str
+    instr : str
+      Converted to a flag
+    tol_wave : float, optional
+      Matching tolerance in wavelength
+      Anything closer than this, even if real, is trouble
+    outfile
+
+    """
+    # Load
+    line_list = arcl_io.load_line_list(line_file)
+    # Add columns (in place)
+    add_instr_source(new_lines, instr, source_file)
+
+    # Loop to my loop
+    updated = False
+    for line in new_lines:
+        # NIST
+        if line['NIST'] != 1:
+            print("Not ready for this")
+            pdb.set_trace()
+        # Search for wavelength match within tolerance
+        mtch_wave = np.where(np.abs(line_list['wave']-line['wave']) < tol_wave)[0]
+        if len(mtch_wave) == 0:
+            if write is False:
+                print("Would add the following line to {:s}".format(line_file))
+                print(line)
+            line_list = vstack([line_list, line]) # Insures columns are matched
+            updated = True
+        elif len(mtch_wave) == 1:
+            idx = mtch_wave[0]
+            if np.abs(line_list['wave'][idx]-line['wave']) > NIST_tol:
+                print("Bad match for a NIST line")
+                print(line)
+                print(line_list[idx])
+                pdb.set_trace()
+            else:  # Check instrument
+                if (line_list['Instr'][idx] % (2*line['Instr'])) >= line['Instr']:
+                    pass
+                else:
+                    line_list['Instr'][idx] += line['Instr']
+                    if write is False:
+                        print("Would update instrument in this line:")
+                        print(line_list[idx])
+                    updated = True
+    # Sort
+    line_list.sort('wave')
+    # Write
+    if write and updated:
+        arcl_io.write_line_list(line_list, line_file)
+
+def vette_unkwn_against_lists(U_lines, uions, wv_tol=0.2,
+                             verbose=False):
+    """ Query unknown lines against NIST database
+
+    Parameters
+    ----------
+    U_lines : Table
+    uions : list or ndarray
+      list of lines to check against
+    wv_tol : float, optional
+      Tolerance for a match
+
+    Returns
+    -------
+    result : bool
+
+    """
+    result = True
+    # Loop on NIST
+    for ion in uions:
+        # Load
+        nist = arcl_io.load_nist(ion)
+        # Try to match
+        for row in U_lines:
+            dwv = np.abs(nist['wave']-row['wave'])
+            imin = np.argmin(np.abs(dwv))
+            if verbose:
+                print("Closest match to ion={:s} for {:g} is".format(ion,row['wave']))
+                print(nist[['Ion','wave','RelInt']][imin])
+            # Match?
+            if dwv[imin] < wv_tol:
+                result = False
+                print("Matched to ion={:s} {:g} with {:g}".format(
+                        ion,nist['wave'][imin], row['wave']))
+                #print(nist[['Ion','wave','RelInt','Aki']][imin])
+
+    # Our line lists
+    line_list = arcl_io.load_line_lists(uion)
+        # Try to match
+        for row in U_lines:
+            dwv = np.abs(nist['wave']-row['wave'])
+            imin = np.argmin(np.abs(dwv))
+            if verbose:
+                print("Closest match to ion={:s} for {:g} is".format(ion,row['wave']))
+                print(nist[['Ion','wave','RelInt']][imin])
+            # Match?
+            if dwv[imin] < wv_tol:
+                result = False
+                print("Matched to ion={:s} {:g} with {:g}".format(
+                        ion,nist['wave'][imin], row['wave']))
+    return result
+
+
 def master_build(write=False, plots=True):
     """ Master loop to build the line lists
 
@@ -214,11 +325,16 @@ def master_build(write=False, plots=True):
         if U_lines is None:
             continue
         unk_file = llist_path+'UNKNWN_lines.dat'
-        # Vette against 'complete' NIST
-        if not os.path.isfile(unk_file):
+        # Check against 'complete' NIST and our line lists
+        vette = vette_unkwn_against_lists(U_lines, uions)
+        if not os.path.isfile(unk_file): # Generate?
             print("Generating line list:\n   {:s}".format(unk_file))
             create_line_list(U_lines, source['File'], source['Instr'],
                              unk_file, unknown=True, ions=uions)
+        else: # Update
+            update_uline_list(U_lines, source['File'], source['Instr'],
+                              unk_file, write=write)
+            pdb.set_trace()
 
 
 
