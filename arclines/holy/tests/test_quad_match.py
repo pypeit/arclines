@@ -164,7 +164,10 @@ def test_quad_match_with_lowredux(low_redux_hdf, instr, swv_uncertainty=200.):
             elif len(mtw) == 1:
                 final_idx[ii]['truth'] = mtw[0]
             else:
-                pdb.set_trace()
+                if instr == 'LRISb':
+                    final_idx[ii]['truth'] = mtw[1] # 4681.45
+                else:
+                    pdb.set_trace()
         #
         for idx in range(nlin-5):
             for jj in range(4):
@@ -210,8 +213,8 @@ def test_quad_match_with_lowredux(low_redux_hdf, instr, swv_uncertainty=200.):
             ispec, grades['ndetect'], grades['nPerf'], grades['nGood'], grades['nOK'],
             grades['nRisk'], grades['nAmb'], grades['nFail'],
                 twv_min))
-        if ispec == 17:
-            xdb.set_trace()
+        #if ispec == 17:
+        #    xdb.set_trace()
     xdb.set_trace()
 
 
