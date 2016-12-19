@@ -105,14 +105,29 @@ def create_line_list(line_tbl, source_file, instr, outfile,
     if unknown:
         if ions is None:
             raise IOError("Must provide list of possible ions if unknown")
-        line_dict = defs.lines()
-        line_flag = 0
-        for uion in ions:
-            line_flag += line_dict[uion]
+        line_flag = get_line_flag(ions)
         cut_tbl['line_flag'] = line_flag
 
     # Write
     arcl_io.write_line_list(cut_tbl, outfile)
+
+
+def get_line_flag(ions):
+    """
+    Parameters
+    ----------
+    ions
+
+    Returns
+    -------
+
+    """
+    line_dict = defs.lines()
+    line_flag = 0
+    for uion in ions:
+        line_flag += line_dict[uion]
+    # Return
+    return line_flag
 
 
 def update_line_list(new_lines, source_file, instr, line_file,
@@ -178,7 +193,7 @@ def update_line_list(new_lines, source_file, instr, line_file,
 
 
 def update_uline_list(new_lines, source_file, instr, line_file,
-                     tol_wave=0.5, write=False):
+                      ions, tol_wave=0.5, write=False):
     """ Update/add to UNKNWN line list as applicable
 
     Parameters
@@ -187,16 +202,21 @@ def update_uline_list(new_lines, source_file, instr, line_file,
     source_file : str
     instr : str
       Converted to a flag
+    line_file : str
+    ions : list
+
     tol_wave : float, optional
       Matching tolerance in wavelength
       Anything closer than this, even if real, is trouble
-    outfile
 
     """
     # Load
     line_list = arcl_io.load_line_list(line_file)
     # Add columns (in place)
     add_instr_source(new_lines, instr, source_file)
+
+    line_flag = get_line_flag(ions)
+    new_lines['line_flag'] = line_flag
 
     # Loop to my loop
     updated = False
@@ -225,6 +245,7 @@ def update_uline_list(new_lines, source_file, instr, line_file,
     # Write
     if write and updated:
         arcl_io.write_line_list(line_list, line_file)
+
 
 def vette_unkwn_against_lists(U_lines, uions, tol_NIST=0.2,
                               tol_llist=1., verbose=False):
@@ -339,7 +360,7 @@ def master_build(write=False, nsources=None, plots=True):
                              unk_file, unknown=True, ions=uions)
         else: # Update
             update_uline_list(U_lines[mask], source['File'], source['Instr'],
-                              unk_file, write=write)
+                              unk_file, uions, write=write)
 
 
 
