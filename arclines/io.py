@@ -3,11 +3,13 @@
 from __future__ import (print_function, absolute_import, division, unicode_literals)
 
 import numpy as np
+import os
 import datetime
 
-from astropy.table import Table, Column
+from astropy.table import Table, Column, vstack
 
 import arclines # For path
+from arclines import defs
 
 
 def load_line_list(line_file, add_path=False):
@@ -28,13 +30,15 @@ def load_line_list(line_file, add_path=False):
     return line_list
 
 
-def load_line_lists(lines, unknown=False):
+def load_line_lists(lines, unknown=False, skip=False):
     """ Loads a series of line list files
 
     Parameters
     ----------
     lamps : list
     unknown : bool, optional
+    skip : bool, optional
+      Skip missing line lists (mainly for building)
 
     Returns
     -------
@@ -49,10 +53,13 @@ def load_line_lists(lines, unknown=False):
     for line in lines:
         line_file = line_path+'{:s}_lines.dat'.format(line)
         if not os.path.isfile(line_file):
-            raise IOError("Input line {:s} is not included in arclines".format(line))
+            if not skip:
+                raise IOError("Input line {:s} is not included in arclines".format(line))
         else:
             lists.append(load_line_list(line_file))
     # Stack
+    if len(lists) == 0:
+        return None
     line_lists = vstack(lists, join_type='exact')
 
     # Unknown
@@ -128,6 +135,34 @@ def load_nist(ion):
     return nist_tbl
 
 
+def load_unknown_list(lines, unknwn_file=None):
+    """
+    Parameters
+    ----------
+    lines : list
+    unknwn_file : str, optional
+
+    Returns
+    -------
+    unknwn_lines : Table
+
+    """
+    line_dict = defs.lines()
+    # Load
+    line_path = arclines.__path__[0]+'/data/lists/'
+    if unknwn_file is None:
+        unknwn_file = line_path+'UNKNWN_lines.dat'
+    # Cut on input lamps
+    line_list = load_line_list(unknwn_file)
+    msk = np.array([False]*len(line_list))
+    for line in lines:
+        line_flag = line_dict[line]
+        match = line_list['line_flag'] % (2*line_flag) >= line_flag
+        msk[match] = True
+    # Finish
+    return line_list[msk]
+
+
 def write_line_list(tbl, outfile):
     """
     Parameters
@@ -139,5 +174,5 @@ def write_line_list(tbl, outfile):
     tbl['wave'].format = '10.4f'
     # Write
     with open(outfile,'w') as f:
-        f.write('#Creation Date: {:s}\n'.format(str(datetime.date.today().strftime('%Y-%b-%d'))))
+        f.write('# Creation Date: {:s}\n'.format(str(datetime.date.today().strftime('%Y-%b-%d'))))
         tbl.write(f, format='ascii.fixed_width')

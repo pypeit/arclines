@@ -41,6 +41,7 @@ def arc_ids(arc_spec, xIDs, IDs, outfile, title=None, path=None,
     # Begin
     if os.path.isfile(plot_path+outfile):
         print("Plot {:s} exists.  Remove if you wish to remake it".format(outfile))
+        return
 
     pp = PdfPages(plot_path+outfile)
     plt.figure(figsize=(11, 8.5))

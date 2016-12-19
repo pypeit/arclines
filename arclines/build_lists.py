@@ -132,6 +132,8 @@ def update_line_list(new_lines, source_file, instr, line_file,
     outfile
 
     """
+    start = "\x1B["
+    end = "\x1B[" + "0m"
     # Load
     line_list = arcl_io.load_line_list(line_file)
     # Add columns (in place)
@@ -148,7 +150,7 @@ def update_line_list(new_lines, source_file, instr, line_file,
         mtch_wave = np.where(np.abs(line_list['wave']-line['wave']) < tol_wave)[0]
         if len(mtch_wave) == 0:
             if write is False:
-                print("Would add the following line to {:s}".format(line_file))
+                print(start+"1:34m"+"Would ADD "+end+"the following line to {:s}".format(line_file))
                 print(line)
             line_list = vstack([line_list, line]) # Insures columns are matched
             updated = True
@@ -165,7 +167,7 @@ def update_line_list(new_lines, source_file, instr, line_file,
                 else:
                     line_list['Instr'][idx] += line['Instr']
                     if write is False:
-                        print("Would update instrument in this line:")
+                        print("Would update INSTRUMENT in this line:")
                         print(line_list[idx])
                     updated = True
     # Sort
@@ -176,7 +178,7 @@ def update_line_list(new_lines, source_file, instr, line_file,
 
 
 def update_uline_list(new_lines, source_file, instr, line_file,
-                     tol_wave=0.1, NIST_tol=0.0001, write=False):
+                     tol_wave=0.5, write=False):
     """ Update/add to UNKNWN line list as applicable
 
     Parameters
@@ -199,10 +201,6 @@ def update_uline_list(new_lines, source_file, instr, line_file,
     # Loop to my loop
     updated = False
     for line in new_lines:
-        # NIST
-        if line['NIST'] != 1:
-            print("Not ready for this")
-            pdb.set_trace()
         # Search for wavelength match within tolerance
         mtch_wave = np.where(np.abs(line_list['wave']-line['wave']) < tol_wave)[0]
         if len(mtch_wave) == 0:
@@ -213,28 +211,23 @@ def update_uline_list(new_lines, source_file, instr, line_file,
             updated = True
         elif len(mtch_wave) == 1:
             idx = mtch_wave[0]
-            if np.abs(line_list['wave'][idx]-line['wave']) > NIST_tol:
-                print("Bad match for a NIST line")
-                print(line)
-                print(line_list[idx])
-                pdb.set_trace()
-            else:  # Check instrument
-                if (line_list['Instr'][idx] % (2*line['Instr'])) >= line['Instr']:
-                    pass
-                else:
-                    line_list['Instr'][idx] += line['Instr']
-                    if write is False:
-                        print("Would update instrument in this line:")
-                        print(line_list[idx])
-                    updated = True
+            # Check instrument
+            if (line_list['Instr'][idx] % (2*line['Instr'])) >= line['Instr']:
+                pass
+            else:
+                line_list['Instr'][idx] += line['Instr']
+                if write is False:
+                    print("Would update instrument in this line:")
+                    print(line_list[idx])
+                updated = True
     # Sort
     line_list.sort('wave')
     # Write
     if write and updated:
         arcl_io.write_line_list(line_list, line_file)
 
-def vette_unkwn_against_lists(U_lines, uions, wv_tol=0.2,
-                             verbose=False):
+def vette_unkwn_against_lists(U_lines, uions, tol_NIST=0.2,
+                              tol_llist=1., verbose=False):
     """ Query unknown lines against NIST database
 
     Parameters
@@ -242,15 +235,19 @@ def vette_unkwn_against_lists(U_lines, uions, wv_tol=0.2,
     U_lines : Table
     uions : list or ndarray
       list of lines to check against
-    wv_tol : float, optional
-      Tolerance for a match
+    tol_NIST : float, optional
+      Tolerance for a match with NIST
+    tol_llist : float, optional
+      Tolerance for a match with arclines line lists
 
     Returns
     -------
-    result : bool
+    mask : bool array
+      True = Add these
+      False = Do not add these
 
     """
-    result = True
+    mask = np.array([True]*len(U_lines))
     # Loop on NIST
     for ion in uions:
         # Load
@@ -263,44 +260,50 @@ def vette_unkwn_against_lists(U_lines, uions, wv_tol=0.2,
                 print("Closest match to ion={:s} for {:g} is".format(ion,row['wave']))
                 print(nist[['Ion','wave','RelInt']][imin])
             # Match?
-            if dwv[imin] < wv_tol:
+            if dwv[imin] < tol_NIST:
                 result = False
-                print("Matched to ion={:s} {:g} with {:g}".format(
+                print("UNKNWN Matched to NIST: ion={:s} {:g} with {:g}".format(
                         ion,nist['wave'][imin], row['wave']))
                 #print(nist[['Ion','wave','RelInt','Aki']][imin])
 
     # Our line lists
-    line_list = arcl_io.load_line_lists(uion)
-        # Try to match
-        for row in U_lines:
-            dwv = np.abs(nist['wave']-row['wave'])
-            imin = np.argmin(np.abs(dwv))
-            if verbose:
-                print("Closest match to ion={:s} for {:g} is".format(ion,row['wave']))
-                print(nist[['Ion','wave','RelInt']][imin])
-            # Match?
-            if dwv[imin] < wv_tol:
-                result = False
-                print("Matched to ion={:s} {:g} with {:g}".format(
-                        ion,nist['wave'][imin], row['wave']))
-    return result
+    line_list = arcl_io.load_line_lists(uions, skip=True)
+    if line_list is None:
+        return mask
+    for ss,row in enumerate(U_lines):
+        dwv = np.abs(line_list['wave']-row['wave'])
+        imin = np.argmin(np.abs(dwv))
+        # Match?
+        if dwv[imin] < tol_llist:
+            mask[ss] = False
+            print("UNKNWN Matched to arclines: ion={:s} {:g} with {:g}".format(
+                    line_list['ion'][imin], line_list['wave'][imin], row['wave']))
+            print("  ---- Will not add it")
+    return mask
 
 
-def master_build(write=False, plots=True):
+def master_build(write=False, nsources=None, plots=True):
     """ Master loop to build the line lists
 
     Parameters
     ----------
     check_only : bool, optional
       Only check to see what would be created, i.e. do not execute
+    nsources : int, optional
+      Mainly for step-by-step build
     plots : bool, optional
       Generate plots, if write=True too
     """
     # Load sources
     sources = arcl_io.load_source_table()
+    if nsources is not None:
+        sources = sources[0:nsources]
 
     # Loop on sources
     for source in sources:
+        print("=============================================================")
+        print("Working on source {:s}".format(source['File']))
+        print("=============================================================")
         # Load line table
         ID_lines, U_lines = load_source.load(source['File'], source['Format'], plot=plots)
         # Loop on ID ions
@@ -326,15 +329,17 @@ def master_build(write=False, plots=True):
             continue
         unk_file = llist_path+'UNKNWN_lines.dat'
         # Check against 'complete' NIST and our line lists
-        vette = vette_unkwn_against_lists(U_lines, uions)
+        mask = vette_unkwn_against_lists(U_lines, uions)
+        if np.sum(mask) == 0:
+            continue
         if not os.path.isfile(unk_file): # Generate?
-            print("Generating line list:\n   {:s}".format(unk_file))
-            create_line_list(U_lines, source['File'], source['Instr'],
+            if write:
+                print("Generating line list:\n   {:s}".format(unk_file))
+                create_line_list(U_lines[mask], source['File'], source['Instr'],
                              unk_file, unknown=True, ions=uions)
         else: # Update
-            update_uline_list(U_lines, source['File'], source['Instr'],
+            update_uline_list(U_lines[mask], source['File'], source['Instr'],
                               unk_file, write=write)
-            pdb.set_trace()
 
 
 
