@@ -72,7 +72,7 @@ def grade_fidx_results(fidx):
     return grades
 
 
-def test_quad_match_with_lowredux(low_redux_hdf, instr, swv_uncertainty=200.):
+def test_quad_match_with_lowredux(low_redux_hdf, instr, swv_uncertainty=500.):
     """
     Returns
     -------
