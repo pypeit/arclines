@@ -174,13 +174,16 @@ def update_line_list(new_lines, source_file, instr, line_file,
     if write and updated:
         arcl_io.write_line_list(line_list, line_file)
 
-def master_build(write=False):
+
+def master_build(write=False, plots=True):
     """ Master loop to build the line lists
 
     Parameters
     ----------
     check_only : bool, optional
       Only check to see what would be created, i.e. do not execute
+    plots : bool, optional
+      Generate plots, if write=True too
     """
     # Load sources
     sources = arcl_io.load_source_table()
@@ -188,7 +191,7 @@ def master_build(write=False):
     # Loop on sources
     for source in sources:
         # Load line table
-        ID_lines, U_lines = load_source.load(source['File'], source['Format'])
+        ID_lines, U_lines = load_source.load(source['File'], source['Format'], plot=plots)
         # Loop on ID ions
         uions = np.unique(ID_lines['ion'].data)
         for ion in uions:
@@ -211,6 +214,7 @@ def master_build(write=False):
         if U_lines is None:
             continue
         unk_file = llist_path+'UNKNWN_lines.dat'
+        # Vette against 'complete' NIST
         if not os.path.isfile(unk_file):
             print("Generating line list:\n   {:s}".format(unk_file))
             create_line_list(U_lines, source['File'], source['Instr'],
