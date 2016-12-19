@@ -167,7 +167,7 @@ def test_quad_match_with_lowredux(low_redux_hdf, instr, swv_uncertainty=200.):
                 final_idx[ii]['truth'] = mtw[0]
             else:
                 if instr == 'LRISb':
-                    final_idx[ii]['truth'] = mtw[1] # 4681.45
+                    final_idx[ii]['truth'] = mtw[0] # Might have had this wrong! Not 4681.45
                 else:
                     pdb.set_trace()
         #
@@ -215,8 +215,8 @@ def test_quad_match_with_lowredux(low_redux_hdf, instr, swv_uncertainty=200.):
             ispec, grades['ndetect'], grades['nPerf'], grades['nGood'], grades['nOK'],
             grades['nRisk'], grades['nAmb'], grades['nFail'],
                 twv_min))
-        #if ispec == 1:
-        #    xdb.set_trace()
+        if ispec == 94:
+            xdb.set_trace()
     extras = np.array(extras)
     extras.sort()
     xdb.set_trace()
@@ -228,7 +228,7 @@ def main(flg_tst):
 
     # Test on LRISb_600
     if (flg_tst % 2**1) >= 2**0:
-        hdf_file = test_arc_path+'LRISb_600.hdf5'  # Create with low_redux.py if needed
+        hdf_file = test_arc_path+'LRISb_600_LRX.hdf5'  # Create with low_redux.py if needed
         test_quad_match_with_lowredux(hdf_file, 'LRISb')
     # Test on LRISr_600
     if (flg_tst % 2**2) >= 2**1:

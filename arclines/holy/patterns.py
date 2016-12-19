@@ -2,7 +2,9 @@
 """
 from __future__ import (print_function, absolute_import, division, unicode_literals)
 
+
 import numpy as np
+import pdb
 
 
 def match_quad_to_list(spec_lines, line_list, wv_guess, dwv_guess,
@@ -39,12 +41,19 @@ def match_quad_to_list(spec_lines, line_list, wv_guess, dwv_guess,
             values = (line_list[start+1:end]-line_list[start]) / (
                 line_list[end]-line_list[start])
             # Test
-            tst0 = np.abs(values-spec_values[0]) < ftol
-            tst1 = np.abs(values-spec_values[1]) < ftol
+            diff0 = np.abs(values-spec_values[0])
+            tst0 = diff0 < ftol
+            diff1 = np.abs(values-spec_values[1])
+            tst1 = diff1 < ftol
             #if np.abs(line_list[start]-6097.8) < 0.2:
             #    debugger.set_trace()
             if np.any(tst0) & np.any(tst1):
-                possible_matches.append([start, start+1+np.where(tst0)[0][0],
-                                       start+1+np.where(tst1)[0][0], end])
+                i0 = np.argmin(diff0)
+                i1 = np.argmin(diff1)
+                #if np.sum(tst0) > 1:
+                #    pdb.set_trace()
+                #possible_matches.append([start, start+1+np.where(tst0)[0][0],
+                #                         start+1+np.where(tst1)[0][0], end])
+                possible_matches.append([start, start+1+i0, start+1+i1, end])
     # Return
     return possible_matches
