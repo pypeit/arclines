@@ -9,6 +9,7 @@ from astropy.table import Table, Column
 
 import arclines # For path
 
+
 def load_line_list(line_file, add_path=False):
     """
     Parameters
@@ -25,6 +26,45 @@ def load_line_list(line_file, add_path=False):
     line_list = Table.read(line_file, format='ascii.fixed_width', comment='#')
     # Return
     return line_list
+
+
+def load_line_lists(lines, unknown=False):
+    """ Loads a series of line list files
+
+    Parameters
+    ----------
+    lamps : list
+    unknown : bool, optional
+
+    Returns
+    -------
+    line_list : Table
+
+    """
+    import arclines # For path
+    line_path = arclines.__path__[0]+'/data/lists/'
+
+    # Read standard files
+    lists = []
+    for line in lines:
+        line_file = line_path+'{:s}_lines.dat'.format(line)
+        if not os.path.isfile(line_file):
+            raise IOError("Input line {:s} is not included in arclines".format(line))
+        else:
+            lists.append(load_line_list(line_file))
+    # Stack
+    line_lists = vstack(lists, join_type='exact')
+
+    # Unknown
+    if unknown:
+        unkn_lines = load_unknown_list(lines)
+        unkn_lines.remove_column('line_flag')  # may wish to have this info
+        # Stack
+        line_lists = vstack([line_lists, unkn_lines])
+
+    # Return
+    return line_lists
+
 
 def load_source_table():
     """ Load table of arcline sources
