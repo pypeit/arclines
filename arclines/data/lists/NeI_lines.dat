@@ -1,4 +1,4 @@
-#Creation Date: 2016-Dec-17
+# Creation Date: 2016-Dec-19
 | ion |       wave | NIST | Instr | amplitude |                    Source |
 | NeI |  5854.1101 |    1 |     1 |      7489 | lrisr_600_7500_PYPIT.json |
 | NeI |  5883.5252 |    1 |     1 |      5962 | lrisr_600_7500_PYPIT.json |

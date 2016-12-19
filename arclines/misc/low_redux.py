@@ -2,39 +2,25 @@
 """
 from __future__ import print_function, absolute_import, division, unicode_literals
 
-import os, json
+import os
 import numpy as np
 import pdb
 import h5py
 from scipy.io.idl import readsav
 
-from matplotlib import pyplot as plt
-
 from astropy.table import Table
 from astropy import units as u
 
-from arclines.holy.utils import find_peaks
+import arclines
+out_path = arclines.__path__[0]+'/data/test_arcs/'
 
-from pypit import pyputils
-msgs = pyputils.get_dummy_logger()
-
-from pypit import ararclines
-from pypit import arwave
-from pypit import arutils
-arutils.dummy_settings()
-
-
-try:
-    from xastropy.xutils import xdebug as debugger
-except:
-    import pdb as debugger
 
 def fcheby(xnrm,order):
     leg = np.zeros((len(xnrm),order))
     leg[:,0] = 1.
     if order >= 2:
         leg[:,1] = xnrm
-    # For looop
+    # For loop
     for j in range(2,order):
         leg[:,j] = 2.0 * xnrm * leg[:,j-1] - leg[:,j-2]
     # Return
@@ -64,15 +50,24 @@ def generate_hdf(sav_file, instr, lamps, outfil, dtoler=0.6):
     -------
 
     """
-    import arclines
-    out_path = arclines.__path__[0]+'/data/test_arcs/'
+    from pypit import pyputils
+    msgs = pyputils.get_dummy_logger()
+
+    from pypit import arwave
+    from pypit import arutils
+    arutils.dummy_settings()
+    #
+    from arclines.pypit_utils import find_peaks
+    from arclines.io import load_line_lists
+    #
+
     # Read IDL save file
     sav_file = os.getenv('LONGSLIT_DIR')+'calib/linelists/'+sav_file
     s = readsav(sav_file)
     ctbl = Table(s['calib'])  # For writing later
 
     # Line list
-    alist = ararclines.load_arcline_list(None, None, lamps, None)
+    alist = load_line_lists(lamps)
 
     # Meta data
     mdict = dict(npix=len(s['archive_arc'][0]), instr=instr,
@@ -119,7 +114,8 @@ def generate_hdf(sav_file, instr, lamps, outfil, dtoler=0.6):
             if np.min(diff) < dtoler:
                 imin  = np.argmin(diff)
                 idwv[kk] = alist['wave'][imin]
-                idsion[kk] = alist['Ion'][imin]
+                #idsion[kk] = alist['Ion'][imin]  NIST
+                idsion[kk] = alist['ion'][imin]
         # Red to blue?
         if mdict['bluered'] is False:
             pixpk = mdict['npix']-1 - pixpk
@@ -155,7 +151,7 @@ def generate_hdf(sav_file, instr, lamps, outfil, dtoler=0.6):
         try:
             outh5['meta'][key] = mdict[key]
         except TypeError:  # Probably a unicode thing
-            debugger.set_trace()
+            pdb.set_trace()
     # Close
     outh5.close()
     print('Wrote {:s}'.format(out_path+outfil))
@@ -166,7 +162,9 @@ def main(flg_tst):
 
     # LRISb 600
     if (flg_tst % 2**1) >= 2**0:
-        generate_hdf('lris_blue_600.sav', 'LRISb_600', ['ZnI', 'CdI', 'HgI', 'NeI', 'ArI'], 'LRISb_600.hdf5')
+        generate_hdf('lris_blue_600.sav', 'LRISb_600',
+                     ['ZnI', 'CdI', 'HgI', 'NeI', 'ArI'],
+                     'LRISb_600_LRX.hdf5')
     # LRISr 600
     if (flg_tst % 2**2) >= 2**1:
         generate_hdf('lris_red_600_7500.sav', 'LRISr_600', ['ArI', 'HgI', 'KrI', 'NeI', 'XeI'], 'LRISr_600_7500.hdf5')
@@ -177,8 +175,8 @@ def main(flg_tst):
 # Test
 if __name__ == '__main__':
     flg_tst = 0
-    #flg_tst += 2**0   # LRISb 600
+    flg_tst += 2**0   # LRISb 600
     #flg_tst += 2**1   # LRISr 600
-    flg_tst += 2**2   # Kastb 600
+    #flg_tst += 2**2   # Kastb 600
 
     main(flg_tst)

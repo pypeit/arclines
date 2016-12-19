@@ -5,15 +5,15 @@ from __future__ import (print_function, absolute_import, division, unicode_liter
 import numpy as np
 import os
 import datetime
-import pdb
 
-from astropy.table import Table, vstack
+from astropy.table import Table, Column, vstack
 
+import arclines # For path
 from arclines import defs
 
-def load_line_list(line_file, add_path=False):
-    """ Simple load of a line list
 
+def load_line_list(line_file, add_path=False):
+    """
     Parameters
     ----------
     line_file : str
@@ -30,13 +30,15 @@ def load_line_list(line_file, add_path=False):
     return line_list
 
 
-def load_line_lists(lines, unknown=False):
+def load_line_lists(lines, unknown=False, skip=False):
     """ Loads a series of line list files
 
     Parameters
     ----------
     lamps : list
     unknown : bool, optional
+    skip : bool, optional
+      Skip missing line lists (mainly for building)
 
     Returns
     -------
@@ -51,10 +53,13 @@ def load_line_lists(lines, unknown=False):
     for line in lines:
         line_file = line_path+'{:s}_lines.dat'.format(line)
         if not os.path.isfile(line_file):
-            raise IOError("Input line {:s} is not included in arclines".format(line))
+            if not skip:
+                raise IOError("Input line {:s} is not included in arclines".format(line))
         else:
             lists.append(load_line_list(line_file))
     # Stack
+    if len(lists) == 0:
+        return None
     line_lists = vstack(lists, join_type='exact')
 
     # Unknown
@@ -76,12 +81,58 @@ def load_source_table():
     sources : Table
 
     """
-    import arclines # For path
     src_file = arclines.__path__[0]+'/data/sources/arcline_sources.ascii'
     # Load
     sources = Table.read(src_file, format='ascii.fixed_width', comment='#')
     # Return
     return sources
+
+
+def load_nist(ion):
+    """Parse a NIST ASCII table.  Note that the long ---- should have
+    been commented out and also the few lines at the start.
+
+    Parameters
+    ----------
+    ion : str
+      Name of ion
+    """
+    import glob
+    # Root (for development only)
+    root = arclines.__path__[0]
+    # Find file
+    srch_file = root + '/data/NIST/'+ion+'_vacuum.ascii'
+    nist_file = glob.glob(srch_file)
+    if len(nist_file) == 0:
+        raise IOError("Cannot find NIST file {:s}".format(srch_file))
+    # Read
+    nist_tbl = Table.read(nist_file[0], format='ascii.fixed_width')
+    gdrow = nist_tbl['Observed'] > 0.  # Eliminate dummy lines
+    nist_tbl = nist_tbl[gdrow]
+    # Now unique values only (no duplicates)
+    uniq, indices = np.unique(nist_tbl['Observed'],return_index=True)
+    nist_tbl = nist_tbl[indices]
+    # Deal with Rel
+    agdrel = []
+    for row in nist_tbl:
+        try:
+            gdrel = int(row['Rel.'])
+        except:
+            try:
+                gdrel = int(row['Rel.'][:-1])
+            except:
+                gdrel = 0
+        agdrel.append(gdrel)
+    agdrel = np.array(agdrel)
+    # Remove and add
+    nist_tbl.remove_column('Rel.')
+    nist_tbl.remove_column('Ritz')
+    nist_tbl['RelInt'] = agdrel
+    #nist_tbl.add_column(Column([ion]*len(nist_tbl), name='Ion', dtype='S5'))
+    nist_tbl.add_column(Column([ion]*len(nist_tbl), name='Ion', dtype='U5'))
+    nist_tbl.rename_column('Observed','wave')
+    # Return
+    return nist_tbl
 
 
 def load_unknown_list(lines, unknwn_file=None):
@@ -96,7 +147,6 @@ def load_unknown_list(lines, unknwn_file=None):
     unknwn_lines : Table
 
     """
-    import arclines # For path
     line_dict = defs.lines()
     # Load
     line_path = arclines.__path__[0]+'/data/lists/'
@@ -124,5 +174,5 @@ def write_line_list(tbl, outfile):
     tbl['wave'].format = '10.4f'
     # Write
     with open(outfile,'w') as f:
-        f.write('#Creation Date: {:s}\n'.format(str(datetime.date.today().strftime('%Y-%b-%d'))))
+        f.write('# Creation Date: {:s}\n'.format(str(datetime.date.today().strftime('%Y-%b-%d'))))
         tbl.write(f, format='ascii.fixed_width')
