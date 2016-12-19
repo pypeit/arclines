@@ -33,6 +33,8 @@ def load(src_file, format, **kwargs):
     # Load
     if format == 'PYPIT1':
         ID_lines, U_lines = load_pypit(1, src_file, **kwargs)
+    elif format == 'LRDX1':
+        ID_lines, U_lines = load_low_redux(1, src_file, **kwargs)
     else:
         raise IOError("Format {:s} for source {:s} is not supported".format(
                 format, src_file))
@@ -64,6 +66,8 @@ def load_pypit(version, src_file, plot=False):
     """
     from pypit import arutils
     # Load
+    if version != 1:
+        raise IOError("Unimplemented version!")
     with open(src_path+src_file,'r') as f:
         pypit_fit = json.load(f)
 
@@ -128,3 +132,18 @@ def load_pypit(version, src_file, plot=False):
     # Return
     return ID_lines, U_lines
 
+def load_low_redux(version, src_file, plot=False):
+    """
+    Parameters
+    ----------
+    version : int
+      Describes type of input
+    src_file : str
+    plot
+
+    Returns
+    -------
+
+    """
+    if version != 1:
+        raise IOError("Unimplemented version!")

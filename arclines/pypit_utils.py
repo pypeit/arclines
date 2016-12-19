@@ -5,6 +5,7 @@ from __future__ import absolute_import, division, print_function
 
 import numpy as np
 
+
 def find_peaks(censpec, siglev=6., bpfit=5):
     """
     Parameters
@@ -26,6 +27,7 @@ def find_peaks(censpec, siglev=6., bpfit=5):
     yrng = np.zeros(detns.size)
     mask = np.zeros(detns.size, dtype=np.int)
     mskcnt = 0
+    # Continuum
     while True:
         w = np.where(mask == 0)
         xfit = xrng[w]
