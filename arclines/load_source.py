@@ -44,7 +44,7 @@ def load(src_file, format, **kwargs):
     return ID_lines, U_lines
 
 
-def load_pypit(version, src_file, plot=False):
+def load_pypit(version, src_file, plot=False, **kwargs):
     """ Load from PYPIT output
 
     Parameters
@@ -132,12 +132,14 @@ def load_pypit(version, src_file, plot=False):
     # Return
     return ID_lines, U_lines
 
-def load_low_redux(version, src_file, plot=False):
+
+def load_low_redux(version, src_file, plot=False, min_hist=8,
+                   cut_amp_val=None, wvmnx=[0., 1e9], ions=None):
     """
     Parameters
     ----------
     version : int
-      Describes type of input
+      1 : Find extras from set of LowRedux fits
     src_file : str
     plot
 
@@ -147,3 +149,56 @@ def load_low_redux(version, src_file, plot=False):
     """
     if version != 1:
         raise IOError("Unimplemented version!")
+
+    import h5py
+    from scipy.interpolate import interp1d
+    from arclines.pypit_utils import find_peaks
+    from arclines.io import load_line_lists
+
+    # Load existing line lists
+    line_list = load_line_lists(ions)
+    wvdata = line_list['wave'].data
+
+    # Open
+    hdf = h5py.File(src_path+src_file,'r')
+    mdict = {}
+    for key in hdf['meta'].keys():
+        mdict[key] = hdf['meta'][key].value
+
+    # Loop on spec
+    extras = []
+    for ispec in range(mdict['nspec']):
+        spec = hdf['arcs/'+str(ispec)+'/spec'].value
+        wave = hdf['arcs/'+str(ispec)+'/wave'].value # vacuum
+        disp = np.median(np.abs(wave-np.roll(wave,1)))
+        npix = wave.size
+        # Find peaks for extras
+        tampl, tcent, twid, w, yprep = find_peaks(spec, siglev=10.)
+        all_tcent = tcent[w]
+
+        # Function for more precise wavelengths
+        fwv = interp1d(np.arange(npix), wave)#, kind='cubic')
+        #
+        amps = []
+        for itc in all_tcent:
+            pix = int(np.round(itc))
+            amps.append(np.max(spec[pix-1:pix+2]))
+        amps = np.array(amps)
+
+        # Trim tcent on amplitude?
+        if cut_amp_val is not None:
+            cut_amp = amps > cut_amp_val  # 500.
+            tcent = all_tcent[cut_amp]
+        else:
+            tcent = all_tcent
+        nlin = tcent.size
+
+        # init with Truth
+        for ii in range(nlin):
+            wvt = fwv(tcent[ii])
+            mtw = np.where(np.abs(wvdata-wvt) < 2*disp)[0]  # Catches bad LRISb line
+            if len(mtw) == 0:
+                if (wvt > wvmnx[0]) & (wvt < wvmnx[1]): # LRISb only
+                    extras.append(wvt)
+    pdb.set_trace()
+

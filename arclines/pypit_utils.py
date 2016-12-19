@@ -17,6 +17,7 @@ def find_peaks(censpec, siglev=6., bpfit=5):
 
     Returns
     -------
+    tampl, tcent, twid, w, yprep
 
     """
     from pypit import arcyarc

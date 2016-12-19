@@ -326,9 +326,17 @@ def master_build(write=False, nsources=None, plots=True):
         print("Working on source {:s}".format(source['File']))
         print("=============================================================")
         # Load line table
-        ID_lines, U_lines = load_source.load(source['File'], source['Format'], plot=plots)
-        # Loop on ID ions
+        ID_lines, U_lines = load_source.load(source['File'], source['Format'],
+                                             ions=source['Lines'].split(','),
+                                             plot=plots, wvmnx=[source['wvmin'], source['wvmax']])
+        # Lines (Double check)
         uions = np.unique(ID_lines['ion'].data)
+        src_lines = source['Lines'].split(',')
+        for src_line in src_lines:
+            if src_line not in uions.tolist():
+                raise ValueError("Line {:s} not found in ID_lines".format(src_line))
+        # Check
+        # Loop on ID ions
         for ion in uions:
             # Parse
             idx = ID_lines['ion'] == ion
