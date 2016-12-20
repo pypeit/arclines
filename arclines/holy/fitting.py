@@ -7,7 +7,8 @@ import numpy as np
 import pdb
 
 
-def iterative_fitting(spec, tcent, ifit, IDs, llist, disp, plot_fil=None):
+def iterative_fitting(spec, tcent, ifit, IDs, llist, disp, plot_fil=None,
+                      verbose=False):
 
     aparm = dict(llist='',
                     disp=disp,             # Ang/unbinned pixel
@@ -45,7 +46,8 @@ def iterative_fitting(spec, tcent, ifit, IDs, llist, disp, plot_fil=None):
         rms_ang = arutils.calc_fit_rms(xfit[mask==0], yfit[mask==0],
                                        fit, aparm['func'], fmin=fmin, fmax=fmax)
         rms_pix = rms_ang/disp
-        print("RMS = {:g}".format(rms_pix))
+        if verbose:
+            print("RMS = {:g}".format(rms_pix))
         # DEBUG
         #if msgs._debug['arc']:
         #    debugger.xpcol(xfit,yfit)
@@ -59,7 +61,8 @@ def iterative_fitting(spec, tcent, ifit, IDs, llist, disp, plot_fil=None):
             mn = np.min(np.abs(iwave-llist['wave']))
             if mn/aparm['disp'] < aparm['match_toler']:
                 imn = np.argmin(np.abs(iwave-llist['wave']))
-                print('Adding {:g} at {:g}'.format(llist['wave'][imn],tcent[ss]))
+                if verbose:
+                    print('Adding {:g} at {:g}'.format(llist['wave'][imn],tcent[ss]))
                 # Update and append
                 all_ids[ss] = llist['wave'][imn]
                 all_idsion[ss] = llist['ion'][imn]
@@ -83,8 +86,9 @@ def iterative_fitting(spec, tcent, ifit, IDs, llist, disp, plot_fil=None):
     if len(irej) > 0:
         xrej = xfit[irej]
         yrej = yfit[irej]
-        for imask in irej:
-            msgs.info('Rejecting arc line {:g}'.format(yfit[imask]))
+        if verbose:
+            for imask in irej:
+                msgs.info('Rejecting arc line {:g}'.format(yfit[imask]))
     else:
         xrej = []
         yrej = []
