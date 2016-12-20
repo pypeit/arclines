@@ -76,14 +76,14 @@ from distutils.extension import Extension
 
 include_gsl_dir = os.getenv('GSL_PATH')+'/include/'
 lib_gsl_dir = os.getenv('GSL_PATH')+'/lib/'
-pyx_files = glob.glob('arclines/*.pyx')
+pyx_files = glob.glob('arclines/holy/*.pyx')
 setup_keywords['ext_modules']=[]
 for pyx_file in pyx_files:
     pyx_split = pyx_file.split('.')
     pyx_split2 = pyx_split[0].split('/')
     # Generate Extension
     #ext = Extension(pyx_split2[1], [pyx_file],
-    ext = Extension('arclines.'+pyx_split2[1], [pyx_file],
+    ext = Extension('arclines.holy.'+pyx_split2[1], [pyx_file],
         include_dirs=[numpy.get_include(),
                     include_gsl_dir],
         library_dirs=[lib_gsl_dir],
