@@ -19,7 +19,7 @@ def match_quad_to_list(spec_lines, line_list, wv_guess, dwv_guess,
 
     Returns
     -------
-    possible_matchtes : list
+    possible_matches : list
       list of indices of matching quads
 
     """
