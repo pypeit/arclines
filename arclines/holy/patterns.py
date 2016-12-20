@@ -57,3 +57,46 @@ def match_quad_to_list(spec_lines, line_list, wv_guess, dwv_guess,
                 possible_matches.append([start, start+1+i0, start+1+i1, end])
     # Return
     return possible_matches
+
+
+def score_quad_matches(fidx):
+    """  Grades quad_match results
+    Parameters
+    ----------
+    fidx
+
+    Returns
+    -------
+    scores : list
+
+    """
+    # Loop on indices
+    scores = []
+    for key in fidx.keys():
+        if len(fidx[key]['matches']) == 0:
+            scores.append('None')
+            continue
+        matches = np.array(fidx[key]['matches'])
+        nmatch = matches.size
+        uni, counts = np.unique(matches, return_counts=True)
+        nuni = len(uni)
+        max_counts = max(counts)
+        # Score
+        if (nuni==1) & (nmatch >= 4):
+            scores.append('Perf')
+        elif nmatch == 0:
+            scores.append('None')
+        elif (max_counts == 4) & (nmatch == 5):
+            scores.append('Good')
+        elif (max_counts/nmatch >= 2./3) & (nmatch >= 6):
+            scores.append('Good')
+        elif (nuni == 1) & (nmatch == 3):
+            scores.append('Good')
+        elif (max_counts == 3) & (nmatch == 4):
+            scores.append('OK')
+        elif (nuni == 1) & (nmatch == 2):
+            scores.append('Risk')
+        else:
+            scores.append('Amb')
+    # Return
+    return scores
