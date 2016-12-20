@@ -59,6 +59,61 @@ def match_quad_to_list(spec_lines, line_list, wv_guess, dwv_guess,
     return possible_matches
 
 
+def run_quad_match(tcent, twave, llist_wv, disp, swv_uncertainty=250.,
+                   pix_tol=1.):
+    """
+    Parameters
+    ----------
+    tcent : ndarray
+      Pixel positions of arc lines
+    twave : ndarray
+      Crude guess at wavelength solution, e.g. from wvcen, disp
+    llist_wv : ndarray
+      Lines to match against (from a line list)
+    pix_tol : float
+      Tolerance in units of pixels to match to
+
+    Returns
+    -------
+    match_idx : dict
+      Record of matches
+    scores : ndarray
+      str array of scores
+    """
+
+    # Init
+    nlin = tcent.size
+    match_idx = {}
+    for ii in range(nlin):
+        match_idx[ii] = {}
+        match_idx[ii]['matches'] = []
+
+    # Run -- quad
+    for idx in range(nlin-4):
+        for jj in range(4):
+            sub_idx = idx + np.arange(5).astype(int)
+            msk = np.array([True]*5)
+            msk[jj+1] = False
+            # Setup
+            sidx = sub_idx[msk]
+            spec_lines = np.array(tcent)[sidx]
+            #
+            widx = int(np.round(tcent[idx]))
+            wvmnx = [twave[widx]-swv_uncertainty, twave[widx]+swv_uncertainty]
+            # Run
+            matches = match_quad_to_list(spec_lines, llist_wv, wvmnx, disp, tol=pix_tol)
+            # Save
+            for match in matches:
+                for ii in range(4):
+                    match_idx[sidx[ii]]['matches'].append(match[ii])
+    # Score
+    scores = score_quad_matches(match_idx)
+    scores = np.array(scores)
+
+    # Return
+    return match_idx, scores
+
+
 def score_quad_matches(fidx):
     """  Grades quad_match results
     Parameters

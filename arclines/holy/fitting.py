@@ -42,9 +42,9 @@ def iterative_fitting(spec, tcent, ifit, IDs, llist, disp, plot_fil=None):
         xfit, yfit = tcent[ifit], all_ids[ifit]
         mask, fit = arutils.robust_polyfit(xfit, yfit, n_order, function=aparm['func'], sigma=aparm['nsig_rej'], minv=fmin, maxv=fmax)
 
-        wave_fit  = arutils.func_val(fit, xfit[mask==0], aparm['func'], minv=fmin, maxv=fmax)
-        rms_Ang = np.sqrt(np.sum((yfit[mask==0]-wave_fit)**2)/np.sum(mask==0))
-        rms_pix = rms_Ang / disp
+        rms_ang = arutils.calc_fit_rms(xfit[mask==0], yfit[mask==0],
+                                       fit, aparm['func'], fmin=fmin, fmax=fmax)
+        rms_pix = rms_ang/disp
         print("RMS = {:g}".format(rms_pix))
         # DEBUG
         #if msgs._debug['arc']:
@@ -91,6 +91,10 @@ def iterative_fitting(spec, tcent, ifit, IDs, llist, disp, plot_fil=None):
     xfit = xfit[mask==0]
     yfit = yfit[mask==0]
     ions = all_idsion[ifit][mask==0]
+    # Final RMS
+    rms_ang = arutils.calc_fit_rms(xfit, yfit, fit, aparm['func'],
+                                   fmin=fmin, fmax=fmax)
+    rms_pix = rms_ang/disp
     #
     '''
     if msgs._debug['arc']:
@@ -116,10 +120,11 @@ def iterative_fitting(spec, tcent, ifit, IDs, llist, disp, plot_fil=None):
     final_fit = dict(fitc=fit, function=aparm['func'], xfit=xfit, yfit=yfit,
         ions=ions, fmin=fmin, fmax=fmax, xnorm=float(npix),
         xrej=xrej, yrej=yrej, mask=mask, spec=spec, nrej=aparm['nsig_rej_final'],
-        shift=0., tcent=tcent)
+        shift=0., tcent=tcent, rms=rms_pix)
     # QA
     if plot_fil is not None:
         arqa.arc_fit_qa(None, final_fit, outfil=plot_fil)
     # Return
     return final_fit
+
 
