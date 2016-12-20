@@ -7,7 +7,7 @@ import numpy as np
 import pdb
 
 
-def iterative_fitting(spec, tcent, ifit, IDs, llist, disp):
+def iterative_fitting(spec, tcent, ifit, IDs, llist, disp, plot_fil=None):
 
     aparm = dict(llist='',
                     disp=disp,             # Ang/unbinned pixel
@@ -118,7 +118,8 @@ def iterative_fitting(spec, tcent, ifit, IDs, llist, disp):
         xrej=xrej, yrej=yrej, mask=mask, spec=spec, nrej=aparm['nsig_rej_final'],
         shift=0., tcent=tcent)
     # QA
-    arqa.arc_fit_qa(None, final_fit, outfil='lrisb_fit.pdf')
+    if plot_fil is not None:
+        arqa.arc_fit_qa(None, final_fit, outfil=plot_fil)
     # Return
     return final_fit
 

@@ -5,7 +5,6 @@ from __future__ import (print_function, absolute_import, division, unicode_liter
 
 import numpy as np
 import os
-import h5py
 import pdb
 
 from arclines import io as arcl_io
@@ -16,8 +15,8 @@ from arclines.pypit_utils import find_peaks
 from xastropy.xutils import xdebug as xdb
 
 
-def test_enchilada(spec, lines, wv_cen, disp, siglev=10., min_ampl=500.,
-                   swv_uncertainty=250., pix_tol=2):
+def test_enchilada(spec, lines, wv_cen, disp, siglev=20., min_ampl=300.,
+                   swv_uncertainty=350., pix_tol=2, plot_fil=None):
     """
     Returns
     -------
@@ -102,7 +101,7 @@ def test_enchilada(spec, lines, wv_cen, disp, siglev=10., min_ampl=500.,
     #pdb.set_trace()
     ifit = np.where(mask)[0]
     arch_fit.iterative_fitting(spec, all_tcent, ifit,
-                               IDs, line_lists[NIST_lines], disp)
+                               IDs, line_lists[NIST_lines], disp, plot_fil=plot_fil)
 
 def main(flg_tst):
     import json
@@ -116,12 +115,24 @@ def main(flg_tst):
         with open(test_arc_path+src_file,'r') as f:
             pypit_fit = json.load(f)
         # Run
-        test_enchilada(np.array(pypit_fit['spec']), ['CdI','HgI','ZnI'], 4400., 1.26)
+        test_enchilada(np.array(pypit_fit['spec']), ['CdI','HgI','ZnI'],
+                       4400., 1.26, plot_fil='lrisb_fit.pdf')
+
+    # Test on Kastb from PYPIT
+    if (flg_tst % 2**2) >= 2**1:
+        # Load spectrum
+        test_arc_path = arclines.__path__[0]+'/data/sources/'
+        src_file = 'kastb_600_PYPIT.json'
+        with open(test_arc_path+src_file,'r') as f:
+            pypit_fit = json.load(f)
+        # Run
+        test_enchilada(np.array(pypit_fit['spec']), ['CdI','HeI','HgI'],
+                       4400., 1.02, plot_fil='kastb_fit.pdf')
 
 # Test
 if __name__ == '__main__':
     flg_tst = 0
-    flg_tst += 2**0   # LRISb 600
-    #flg_tst += 2**1   # LRISr 600
+    #flg_tst += 2**0   # LRISb 600
+    flg_tst += 2**1   # Kastb
 
     main(flg_tst)
