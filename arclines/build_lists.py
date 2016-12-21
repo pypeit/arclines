@@ -11,11 +11,14 @@ from collections import OrderedDict
 from astropy.table import Table, vstack
 
 from arclines import io as arcl_io
+from arclines import utils as arcl_utils
 from arclines import load_source
 from arclines import defs
 
 import arclines # For path
 llist_path = arclines.__path__[0]+'/data/lists/'
+src_path = arclines.__path__[0]+'/data/sources/'
+
 
 def init_line_list():
     """ Initialize a Table for a linelist
@@ -152,7 +155,8 @@ def update_line_list(new_lines, source_file, instr, line_file,
     # Load
     line_list = arcl_io.load_line_list(line_file)
     # Add columns (in place)
-    add_instr_source(new_lines, instr, source_file)
+    if 'Instr' not in new_lines.keys():
+        add_instr_source(new_lines, instr, source_file)
 
     # Loop to my loop
     updated = False
@@ -247,63 +251,7 @@ def update_uline_list(new_lines, source_file, instr, line_file,
         arcl_io.write_line_list(line_list, line_file)
 
 
-def vette_unkwn_against_lists(U_lines, uions, tol_NIST=0.2,
-                              tol_llist=1., verbose=False):
-    """ Query unknown lines against NIST database
-
-    Parameters
-    ----------
-    U_lines : Table
-    uions : list or ndarray
-      list of lines to check against
-    tol_NIST : float, optional
-      Tolerance for a match with NIST
-    tol_llist : float, optional
-      Tolerance for a match with arclines line lists
-
-    Returns
-    -------
-    mask : bool array
-      True = Add these
-      False = Do not add these
-
-    """
-    mask = np.array([True]*len(U_lines))
-    # Loop on NIST
-    for ion in uions:
-        # Load
-        nist = arcl_io.load_nist(ion)
-        # Try to match
-        for row in U_lines:
-            dwv = np.abs(nist['wave']-row['wave'])
-            imin = np.argmin(np.abs(dwv))
-            if verbose:
-                print("Closest match to ion={:s} for {:g} is".format(ion,row['wave']))
-                print(nist[['Ion','wave','RelInt']][imin])
-            # Match?
-            if dwv[imin] < tol_NIST:
-                result = False
-                print("UNKNWN Matched to NIST: ion={:s} {:g} with {:g}".format(
-                        ion,nist['wave'][imin], row['wave']))
-                #print(nist[['Ion','wave','RelInt','Aki']][imin])
-
-    # Our line lists
-    line_list = arcl_io.load_line_lists(uions, skip=True)
-    if line_list is None:
-        return mask
-    for ss,row in enumerate(U_lines):
-        dwv = np.abs(line_list['wave']-row['wave'])
-        imin = np.argmin(np.abs(dwv))
-        # Match?
-        if dwv[imin] < tol_llist:
-            mask[ss] = False
-            print("UNKNWN Matched to arclines: ion={:s} {:g} with {:g}".format(
-                    line_list['ion'][imin], line_list['wave'][imin], row['wave']))
-            print("  ---- Will not add it")
-    return mask
-
-
-def master_build(write=False, nsources=None, plots=True):
+def master_build(write=False, nsources=None, plots=True, verbose=True):
     """ Master loop to build the line lists
 
     Parameters
@@ -327,7 +275,7 @@ def master_build(write=False, nsources=None, plots=True):
         print("=============================================================")
         # Load line table
         ID_lines, U_lines = load_source.load(source['File'], source['Format'],
-                                             ions=source['Lines'].split(','),
+                                             source['Lines'].split(','),
                                              plot=plots, wvmnx=[source['wvmin'], source['wvmax']])
         # Lines (Double check)
         src_lines = source['Lines'].split(',')
@@ -361,17 +309,30 @@ def master_build(write=False, nsources=None, plots=True):
             continue
         unk_file = llist_path+'UNKNWN_lines.dat'
         # Check against 'complete' NIST and our line lists
-        mask = vette_unkwn_against_lists(U_lines, uions)
+        mask, _ = arcl_utils.vette_unkwn_against_lists(U_lines, uions, verbose=verbose)
         if np.sum(mask) == 0:
             continue
         if not os.path.isfile(unk_file): # Generate?
             if write:
                 print("Generating line list:\n   {:s}".format(unk_file))
-                create_line_list(U_lines[mask], source['File'], source['Instr'],
+                create_line_list(U_lines[mask>0], source['File'], source['Instr'],
                              unk_file, unknown=True, ions=uions)
         else: # Update
-            update_uline_list(U_lines[mask], source['File'], source['Instr'],
+            update_uline_list(U_lines[mask>0], source['File'], source['Instr'],
                               unk_file, uions, write=write)
-
+    # By-hand
+    print("=============================================================")
+    print("Adding lines by hand!")
+    print("=============================================================")
+    handIDs = arcl_io.load_by_hand()
+    uhions = np.unique(handIDs['ion'].data)
+    # Loop on ID ions
+    for ion in uhions:
+        # Parse
+        idx = handIDs['ion'] == ion
+        sub_tbl = handIDs[idx]
+        # Update only
+        ion_file  = llist_path+'{:s}_lines.dat'.format(ion)
+        update_line_list(sub_tbl, None, None, ion_file, write=write)
 
 
