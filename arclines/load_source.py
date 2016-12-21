@@ -12,6 +12,7 @@ import arclines # For path
 src_path = arclines.__path__[0]+'/data/sources/'
 
 from arclines import plots as arcl_plots
+from arclines import utils as arcl_utils
 
 # Hard-coded string lengths, and more
 from arclines import defs
@@ -19,7 +20,7 @@ str_len_dict = defs.str_len()
 instr_dict = defs.instruments()
 line_dict = defs.lines()
 
-def load(src_file, format, **kwargs):
+def load(src_file, format, ions, **kwargs):
     """
     Parameters
     ----------
@@ -32,9 +33,9 @@ def load(src_file, format, **kwargs):
     """
     # Load
     if format == 'PYPIT1':
-        ID_lines, U_lines = load_pypit(1, src_file, **kwargs)
+        ID_lines, U_lines = load_pypit(1, src_file, ions, **kwargs)
     elif format == 'LRDX1':
-        ID_lines, U_lines = load_low_redux(1, src_file, **kwargs)
+        ID_lines, U_lines = load_low_redux(1, src_file, ions, **kwargs)
     else:
         raise IOError("Format {:s} for source {:s} is not supported".format(
                 format, src_file))
@@ -44,7 +45,7 @@ def load(src_file, format, **kwargs):
     return ID_lines, U_lines
 
 
-def load_pypit(version, src_file, plot=False, **kwargs):
+def load_pypit(version, src_file, ions, plot=False, **kwargs):
     """ Load from PYPIT output
 
     Parameters
@@ -117,9 +118,15 @@ def load_pypit(version, src_file, plot=False, **kwargs):
             IDs.append('{:s} {:.4f}'.format(row['ion'], row['wave']))
         # Extras
         if U_lines is not None:
+            # Match to NIST
+            mask, wv_match = arcl_utils.vette_unkwn_against_lists(U_lines, ions)
             pextras = dict(x=epix, IDs=[])
-            for row in U_lines:
-                pextras['IDs'].append('{:s} {:.4f}'.format(row['ion'], row['wave']))
+            for ss,row in enumerate(U_lines):
+                if mask[ss] == 2:  # Matched to NIST
+                    lbl = '{:.4f}'.format(row['wave']) + ' [{:s}]'.format(wv_match[ss])
+                else:
+                    lbl = 'UNKNWN {:.4f}'.format(row['wave'])
+                pextras['IDs'].append(lbl)
         else:
             pextras = None
         #
@@ -133,8 +140,8 @@ def load_pypit(version, src_file, plot=False, **kwargs):
     return ID_lines, U_lines
 
 
-def load_low_redux(version, src_file, plot=False, min_hist=10,
-                   cut_amp_val=400., wvmnx=[0., 1e9], ions=None):
+def load_low_redux(version, src_file, ions, plot=False, min_hist=10,
+                   cut_amp_val=400., wvmnx=[0., 1e9]):
     """
     Parameters
     ----------
@@ -226,8 +233,17 @@ def load_low_redux(version, src_file, plot=False, min_hist=10,
         else:
             cnt = gdcnt[0]
 
+    # Table
+    U_lines = Table()
+    U_lines['wave'] = final_extras
+    U_lines['ion'] = str('UNKNWN').rjust(str_len_dict['ion'])
+    U_lines['NIST'] = 0
+    U_lines['amplitude'] = final_amps
+
     # Plot??
     if plot:
+        # Match to NIST
+        mask, wv_match = arcl_utils.vette_unkwn_against_lists(U_lines, ions)
         # Find the best spectrum
         max_nex = 0
         for ispec in range(mdict['nspec']):
@@ -244,21 +260,20 @@ def load_low_redux(version, src_file, plot=False, min_hist=10,
         npix = wave.size
         fpix = interp1d(wave, np.arange(npix))#, kind='cubic')
         pextras = dict(x=fpix(final_extras), IDs=[])
-        for fex in final_extras:
-            pextras['IDs'].append('UNKNWN {:.4f}'.format(fex))
+        for ss,fex in enumerate(final_extras):
+            if mask[ss] == 2:  # Matched to NIST
+                lbl = '{:.4f}'.format(fex) + ' [{:s}]'.format(wv_match[ss])
+            else:
+                lbl = 'UNKNWN {:.4f}'.format(fex)
+            pextras['IDs'].append(lbl)
         # Plot
         arcl_plots.arc_ids(spec, [], [],
                            src_file.replace('.hdf5', '.pdf'),
                            title=src_file.replace('.hdf5', ''),
                            extras=pextras)
-    # Table
-    U_lines = Table()
-    U_lines['wave'] = final_extras
-    U_lines['ion'] = str('UNKNWN').rjust(str_len_dict['ion'])
-    U_lines['NIST'] = 0
-    U_lines['amplitude'] = final_amps
 
     # Return
     return None, U_lines
+
 
 

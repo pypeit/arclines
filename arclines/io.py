@@ -5,11 +5,42 @@ from __future__ import (print_function, absolute_import, division, unicode_liter
 import numpy as np
 import os
 import datetime
+import pdb
 
 from astropy.table import Table, Column, vstack
 
 import arclines # For path
 from arclines import defs
+
+
+def load_by_hand():
+    """ By-hand line list
+    Parameters
+    ----------
+    line_file
+    add_path
+
+    Returns
+    -------
+    byhand : Table
+
+    """
+    str_len_dict = defs.str_len()
+
+    src_file = arclines.__path__[0]+'/data/sources/by_hand_list.ascii'
+    # Read
+    line_list = Table.read(src_file, format='ascii.fixed_width', comment='#')
+    # Add
+    line_list['NIST'] = 1
+    # Deal with Instr and Source
+    ilist, slist = [], []
+    for row in line_list:
+        ilist.append(defs.instruments()[row['sInstr']])  # May need to split
+        slist.append(row['sSource'])
+    line_list['Instr'] = ilist
+    line_list['Source'] = np.array(slist, dtype='S{:d}'.format(str_len_dict['Source']))
+    # Trim
+    return line_list[['ion', 'wave', 'NIST', 'Instr', 'amplitude', 'Source']]
 
 
 def load_line_list(line_file, add_path=False):
@@ -45,7 +76,6 @@ def load_line_lists(lines, unknown=False, skip=False):
     line_list : Table
 
     """
-    import arclines # For path
     line_path = arclines.__path__[0]+'/data/lists/'
 
     # Read standard files
