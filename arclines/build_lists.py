@@ -107,9 +107,10 @@ def add_instr_source(line_tbl, instr, source_file):
     line_tbl['Source'] = source
 
 
-def create_line_list(line_tbl, source_file, instr,
-                     unknown=False, ions=None):
-    """
+def create_line_list(line_tbl, source_file, instr, unknown=False, ions=None):
+    """  Create a line list from an input table
+    Mainly checks formatting and adds a few columns
+
     Parameters
     ----------
     line_tbl
@@ -207,6 +208,47 @@ def source_to_line_lists(source, write=False, llist_dict=None):
     # Return
     return llist_dict
 
+def source_to_unknowns(source, write=False, verbose=True):
+    """
+    Parameters
+    ----------
+    source
+    write
+
+    Returns
+    -------
+
+    """
+    unk_file = llist_path+'UNKNWNs.dat'
+
+    # Load
+    src_dict = load_source.load(source)
+    U_lines = src_dict['U_lines']
+
+    # UNKNWN lines
+    if U_lines is None:
+        return
+
+    # Unique ions
+    uions = arcl_utils.unique_ions(source, src_dict=src_dict)
+
+    # Check against 'complete' NIST and our line lists
+    mask, _ = arcl_utils.vette_unkwn_against_lists(U_lines, uions, verbose=verbose)
+    if np.sum(mask) == 0:
+        return
+
+    if not os.path.isfile(unk_file): # Generate?
+        if write:
+            print("Generating line list:\n   {:s}".format(unk_file))
+            unknwn_list = create_line_list(U_lines[mask>0], source['File'], source['Instr'],
+                             unknown=True, ions=uions)
+            arcl_io.write_line_list(unknwn_list, unk_file)
+    else: # Update
+        unknwn_list, updated = update_uline_list(U_lines[mask>0], source['File'], source['Instr'],
+                          unk_file, uions)
+        if write and updated:
+            arcl_io.write_line_list(unknwn_list, unk_file)
+
 
 def update_line_list(line_list, new_lines, source_file, instr, tol_wave=0.1, NIST_tol=0.0001):
     """ Update/add to lines in line list as applicable
@@ -266,8 +308,8 @@ def update_line_list(line_list, new_lines, source_file, instr, tol_wave=0.1, NIS
     return line_list, updated
 
 
-def update_uline_list(new_lines, source_file, instr, line_file,
-                      ions, tol_wave=0.5, write=False):
+def update_uline_list(new_lines, source_file, instr, unk_file,
+                      ions, tol_wave=0.5):
     """ Update/add to UNKNWN line list as applicable
 
     Parameters
@@ -276,7 +318,7 @@ def update_uline_list(new_lines, source_file, instr, line_file,
     source_file : str
     instr : str
       Converted to a flag
-    line_file : str
+    unk_file : str
     ions : list
 
     tol_wave : float, optional
@@ -285,7 +327,7 @@ def update_uline_list(new_lines, source_file, instr, line_file,
 
     """
     # Load
-    line_list = arcl_io.load_line_list(line_file)
+    line_list = arcl_io.load_line_list(unk_file)
     # Add columns (in place)
     add_instr_source(new_lines, instr, source_file)
 
@@ -298,9 +340,8 @@ def update_uline_list(new_lines, source_file, instr, line_file,
         # Search for wavelength match within tolerance
         mtch_wave = np.where(np.abs(line_list['wave']-line['wave']) < tol_wave)[0]
         if len(mtch_wave) == 0:
-            if write is False:
-                print("Would add the following line to {:s}".format(line_file))
-                print(line)
+            print("Added the following line to {:s}".format(unk_file))
+            print(line)
             line_list = vstack([line_list, line]) # Insures columns are matched
             updated = True
         elif len(mtch_wave) == 1:
@@ -310,15 +351,13 @@ def update_uline_list(new_lines, source_file, instr, line_file,
                 pass
             else:
                 line_list['Instr'][idx] += line['Instr']
-                if write is False:
-                    print("Would update instrument in this line:")
-                    print(line_list[idx])
+                print("Updated instrument in this line:")
+                print(line_list[idx])
                 updated = True
     # Sort
     line_list.sort('wave')
-    # Write
-    if write and updated:
-        arcl_io.write_line_list(line_list, line_file)
+    # Return
+    return line_list, updated
 
 
 def master_build(write=False, nsources=None, plots=True, verbose=True):
@@ -374,21 +413,4 @@ def master_build(write=False, nsources=None, plots=True, verbose=True):
                 else:
                     update_line_list(sub_tbl, source['File'],
                                      source['Instr'], ion_file, write=write)
-        # UNKNWN lines
-        if U_lines is None:
-            continue
-        unk_file = llist_path+'UNKNWN_lines.dat'
-        # Check against 'complete' NIST and our line lists
-        mask, _ = arcl_utils.vette_unkwn_against_lists(U_lines, uions, verbose=verbose)
-        if np.sum(mask) == 0:
-            continue
-        if not os.path.isfile(unk_file): # Generate?
-            if write:
-                print("Generating line list:\n   {:s}".format(unk_file))
-                create_line_list(U_lines[mask>0], source['File'], source['Instr'],
-                             unk_file, unknown=True, ions=uions)
-        else: # Update
-            update_uline_list(U_lines[mask>0], source['File'], source['Instr'],
-                              unk_file, uions, write=write)
-
 

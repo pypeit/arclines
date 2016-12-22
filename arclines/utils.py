@@ -32,7 +32,7 @@ def unique_ions(source, src_dict=None):
         return src_lines
 
 
-def vette_unkwn_against_lists(U_lines, uions, tol_NIST=0.2,
+def vette_unkwn_against_lists(U_lines, uions, tol_NIST=0.2, NIST_only=False,
                               tol_llist=1., verbose=False):
     """ Query unknown lines against NIST database
 
@@ -79,11 +79,13 @@ def vette_unkwn_against_lists(U_lines, uions, tol_NIST=0.2,
                     print("UNKNWN Matched to NIST: ion={:s} {:g} with {:g}".format(
                         ion,nist['wave'][imin], row['wave']))
                 #print(nist[['Ion','wave','RelInt','Aki']][imin])
+    if NIST_only:
+        return mask, wv_match
 
     # Our line lists
     line_list = arcl_io.load_line_lists(uions, skip=True)
     if line_list is None:
-        return mask
+        return mask, wv_match
     for ss,row in enumerate(U_lines):
         dwv = np.abs(line_list['wave']-row['wave'])
         imin = np.argmin(np.abs(dwv))

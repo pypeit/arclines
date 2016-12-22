@@ -38,3 +38,4 @@ Plots
 Generate PDF summaries of each source::
 
     ./scripts/build_from_scratch.py --plots
+

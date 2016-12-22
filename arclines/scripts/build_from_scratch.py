@@ -17,9 +17,9 @@ def parser(options=None):
     parser = argparse.ArgumentParser(
         description='Build the arclines line lists from scratch')
     parser.add_argument("-w", "--write", default=False, action='store_true', help="Actually write files?")
-    parser.add_argument("--skip_stop", default=False, action='store_true', help="Actually write files?")
-    parser.add_argument("--unknowns", default=False, action='store_true', help="Actually write files?")
-    #parser.add_argument("-s", "--step_by_step", default=False, action='store_true', help="Step by step build?")
+    parser.add_argument("--skip_stop", default=False, action='store_true', help="Skip warning stop?")
+    parser.add_argument("--unknowns", default=False, action='store_true', help="Create Unknown list?")
+    parser.add_argument("--plots", default=False, action='store_true', help="Create plots?")
 
     if options is None:
         args = parser.parse_args()
@@ -44,6 +44,9 @@ def main(args=None):
     import numpy as np
     from arclines import build_lists
     from arclines import io as arcl_io
+    from arclines import load_source
+    from arclines import plots as arcl_plots
+    from arclines import utils as arcl_utils
 
 
     print("=============================================================")
@@ -60,7 +63,7 @@ def main(args=None):
 
     # IDs
     llist_dict = {}
-    if not pargs.unknowns:
+    if (not pargs.unknowns) and (not pargs.plots):
         for kk,source in enumerate(sources):
             print("=============================================================")
             print("Working on adding IDs from source {:s}".format(source['File']))
@@ -76,6 +79,35 @@ def main(args=None):
             print("Rerun with --write if you are happy with what you see.")
             print("=============================================================")
         return
+
+    # Unknowns
+    if pargs.unknowns:
+        # Load all line lists
+        for kk,source in enumerate(sources):
+            print("=============================================================")
+            print("Working on adding Unknowns from source {:s}".format(source['File']))
+            print("=============================================================")
+            build_lists.source_to_unknowns(source, write=pargs.write)
+
+    # Unknowns
+    if pargs.plots:
+        # Load all line lists
+        line_lists = arcl_io.load_line_lists([], all=True, unknown=True)
+        # Loop to my loop
+        for kk,source in enumerate(sources):
+            print("Working on plot for {:s}".format(source['File']))
+            print("=============================================================")
+            # Load
+            src_dict = load_source.load(source)
+            uions = arcl_utils.unique_ions(source, src_dict=src_dict)
+            src_dict['uions'] = uions
+            # Outfile
+            iext = source['File'].rfind('.')
+            outfile = source['File'][:iext]+'.pdf'
+            title = source['File'][:iext]
+            #
+            arcl_plots.show_source(src_dict, line_lists, outfile, title=title)
+
 
 if __name__ == '__main__':
     main()

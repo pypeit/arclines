@@ -61,7 +61,7 @@ def load_line_list(line_file, add_path=False):
     return line_list
 
 
-def load_line_lists(lines, unknown=False, skip=False):
+def load_line_lists(lines, unknown=False, skip=False, all=False):
     """ Loads a series of line list files
 
     Parameters
@@ -76,7 +76,17 @@ def load_line_lists(lines, unknown=False, skip=False):
     line_list : Table
 
     """
+    import glob
     line_path = arclines.__path__[0]+'/data/lists/'
+
+    # All?
+    if all:
+        line_files = glob.glob(line_path+'*_lines.dat')
+        lines = []
+        for line_file in line_files:
+            i0 = line_file.rfind('/')
+            i1 = line_file.rfind('_')
+            lines.append(line_file[i0+1:i1])
 
     # Read standard files
     lists = []
@@ -181,7 +191,7 @@ def load_unknown_list(lines, unknwn_file=None):
     # Load
     line_path = arclines.__path__[0]+'/data/lists/'
     if unknwn_file is None:
-        unknwn_file = line_path+'UNKNWN_lines.dat'
+        unknwn_file = line_path+'UNKNWNs.dat'
     # Cut on input lamps
     line_list = load_line_list(unknwn_file)
     msk = np.array([False]*len(line_list))

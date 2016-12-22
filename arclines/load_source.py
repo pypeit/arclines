@@ -142,7 +142,9 @@ def load_pypit(version, src_file, ions, plot=False, **kwargs):
 
     # Return
     return mk_src_dict(ID_lines=ID_lines, U_lines=U_lines,
-                       spec=np.array(pypit_fit['spec']), wave=wave)
+                       spec=np.array(pypit_fit['spec']), wave=wave,
+                       xIDs=np.array(pypit_fit['xfit'])*(npix-1),
+                       epix=epix)
 
 
 def load_low_redux(version, src_file, ions, plot=False, min_hist=10,
@@ -250,26 +252,29 @@ def load_low_redux(version, src_file, ions, plot=False, min_hist=10,
     U_lines['NIST'] = 0
     U_lines['amplitude'] = final_amps
 
+    # Find the best spectrum
+    max_nex = 0
+    for ispec in range(mdict['nspec']):
+        spec = hdf['arcs/'+str(ispec)+'/spec'].value
+        wave = hdf['arcs/'+str(ispec)+'/wave'].value # vacuum
+        minwv, maxwv = np.min(wave), np.max(wave)
+        nex = np.sum((final_extras>minwv) & (final_extras<maxwv))
+        if nex > max_nex:
+            svi = ispec
+            max_nex = nex
+    # Find pixel values
+    spec = hdf['arcs/'+str(svi)+'/spec'].value
+    wave = hdf['arcs/'+str(svi)+'/wave'].value  # vacuum
+
+    # Extras
+    fpix = interp1d(wave, np.arange(npix))#, kind='cubic')
+    epix=fpix(final_extras)
+
     # Plot??
     if plot:
         # Match to NIST
         mask, wv_match = arcl_utils.vette_unkwn_against_lists(U_lines, ions)
-        # Find the best spectrum
-        max_nex = 0
-        for ispec in range(mdict['nspec']):
-            spec = hdf['arcs/'+str(ispec)+'/spec'].value
-            wave = hdf['arcs/'+str(ispec)+'/wave'].value # vacuum
-            minwv, maxwv = np.min(wave), np.max(wave)
-            nex = np.sum((final_extras>minwv) & (final_extras<maxwv))
-            if nex > max_nex:
-                svi = ispec
-                max_nex = nex
-        # Find pixel values
-        spec = hdf['arcs/'+str(svi)+'/spec'].value
-        wave = hdf['arcs/'+str(svi)+'/wave'].value # vacuum
         npix = wave.size
-        fpix = interp1d(wave, np.arange(npix))#, kind='cubic')
-        pextras = dict(x=fpix(final_extras), IDs=[])
         for ss,fex in enumerate(final_extras):
             if mask[ss] == 2:  # Matched to NIST
                 lbl = '{:.4f}'.format(fex) + ' [{:s}]'.format(wv_match[ss])
@@ -283,7 +288,7 @@ def load_low_redux(version, src_file, ions, plot=False, min_hist=10,
                            extras=pextras)
 
     # Return
-    return mk_src_dict(U_lines=U_lines)
+    return mk_src_dict(U_lines=U_lines, epix=epix, spec=spec, wave=wave)
 
 
 def mk_src_dict(**kwargs):
@@ -302,8 +307,9 @@ def mk_src_dict(**kwargs):
     src_dict = {}
     #
     req_keys = []
-    fill_keys = ['ID_lines', 'U_lines', 'spec', 'wave']
-    allowed_keys = req_keys + fill_keys
+    fill_keys = ['ID_lines', 'U_lines', 'spec', 'wave', 'xIDs']
+    optional_keys = ['epix', 'uions']
+    allowed_keys = req_keys + fill_keys + optional_keys
 
     # Parse
     for key in allowed_keys:
