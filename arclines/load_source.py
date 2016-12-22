@@ -20,7 +20,8 @@ str_len_dict = defs.str_len()
 instr_dict = defs.instruments()
 line_dict = defs.lines()
 
-def load(src_file, format, ions, **kwargs):
+
+def load(source, **kwargs):
     """
     Parameters
     ----------
@@ -31,18 +32,21 @@ def load(src_file, format, ions, **kwargs):
     -------
 
     """
+    # Parse
+    src_file = source['File']
+    format = source['Format']
+    ions = source['Lines'].split(',')
+    wvmnx=[source['wvmin'], source['wvmax']]
     # Load
     if format == 'PYPIT1':
-        ID_lines, U_lines = load_pypit(1, src_file, ions, **kwargs)
+        src_dict = load_pypit(1, src_file, ions, **kwargs)
     elif format == 'LRDX1':
-        ID_lines, U_lines = load_low_redux(1, src_file, ions, **kwargs)
+        src_dict = load_low_redux(1, src_file, ions, wvmnx=wvmnx, **kwargs)
     else:
         raise IOError("Format {:s} for source {:s} is not supported".format(
                 format, src_file))
-    # Reject lines
-
     # Return
-    return ID_lines, U_lines
+    return src_dict
 
 
 def load_pypit(version, src_file, ions, plot=False, **kwargs):
@@ -137,7 +141,8 @@ def load_pypit(version, src_file, ions, plot=False, **kwargs):
                            extras=pextras)
 
     # Return
-    return ID_lines, U_lines
+    return mk_src_dict(ID_lines=ID_lines, U_lines=U_lines,
+                       spec=np.array(pypit_fit['spec']), wave=wave)
 
 
 def load_low_redux(version, src_file, ions, plot=False, min_hist=10,
@@ -154,6 +159,7 @@ def load_low_redux(version, src_file, ions, plot=False, min_hist=10,
     -------
 
     """
+    import warnings
     if version != 1:
         raise IOError("Unimplemented version!")
 
@@ -163,7 +169,11 @@ def load_low_redux(version, src_file, ions, plot=False, min_hist=10,
     from arclines.io import load_line_lists
 
     # Load existing line lists
-    line_list = load_line_lists(ions)
+    line_list = load_line_lists(ions, skip=True)
+    if line_list is None:  # Should be a 'by scratch case'
+        warnings.warn("No line lists found matching your ions: {}".format(ions))
+        print("I hope you are building from scratch here..")
+        return mk_src_dict()
     wvdata = line_list['wave'].data
 
     # Open
@@ -273,7 +283,35 @@ def load_low_redux(version, src_file, ions, plot=False, min_hist=10,
                            extras=pextras)
 
     # Return
-    return None, U_lines
+    return mk_src_dict(U_lines=U_lines)
 
 
+def mk_src_dict(**kwargs):
+    """
+    Parameters
+    ----------
+    ID_lines
+    U_lines
+    spec
+    wave
 
+    Returns
+    -------
+
+    """
+    src_dict = {}
+    #
+    req_keys = []
+    fill_keys = ['ID_lines', 'U_lines', 'spec', 'wave']
+    allowed_keys = req_keys + fill_keys
+
+    # Parse
+    for key in allowed_keys:
+        if key in kwargs.keys():
+            src_dict[key] = kwargs[key]
+        else:
+            if key in fill_keys:
+                src_dict[key] = None
+
+    # Return
+    return src_dict
