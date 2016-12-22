@@ -8,6 +8,7 @@ import datetime
 import pdb
 
 from astropy.table import Table, Column, vstack
+from astropy.io import fits
 
 import arclines # For path
 from arclines import defs
@@ -202,6 +203,29 @@ def load_unknown_list(lines, unknwn_file=None):
     # Finish
     return line_list[msk]
 
+def load_spectrum(spec_file):
+    """ Load a simple spectrum from input file
+
+    Parameters
+    ----------
+    spec_file : str
+      .fits --  Assumes simple ndarray in 0 extension
+      .ascii -- Assumes Table.read(format='ascii') will work with single column
+
+    Returns
+    -------
+
+    """
+    iext = spec_file.rfind('.')
+    if 'ascii' in spec_file[iext:]:
+        tbl = Table.read(spec_file, format='ascii')
+        key = tbl.keys()[0]
+        spec = tbl[key].data
+    elif 'fits' in spec_file[iext:]:
+        spec = fits.open(spec_file)[0].data
+
+    # Return
+    return spec
 
 def write_line_list(tbl, outfile):
     """
