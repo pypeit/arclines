@@ -11,10 +11,10 @@ Basic Methodology
 =================
 
 The script will scan through 3 regions of parameter space:
-(1) linelist -- it will try using the unknown line list and
- without;
-(2) pix_tol -- values of 1. and 2. are attempted
-(3) wv_cen  -- solutions are scanned from +/- 1000. from the input value
+
+ 1. linelist -- it will try using the unknown line list and without;
+ 2. pix_tol -- values of 1 and 2 are attempted
+ 3. wv_cen  -- solutions are scanned from +/- 1000. from the input value
 
 Script
 ======
