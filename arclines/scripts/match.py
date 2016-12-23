@@ -21,7 +21,7 @@ def parser(options=None):
     parser.add_argument("disp", type=float, help="Accurate dispersion (Ang/pix)")
     parser.add_argument("lines", type=str, help="Comma separated list of lamps")
     parser.add_argument("--outroot", default='tmp_matches', action='store_true', help="Root filename for plot, IDs")
-    #parser.add_argument("--plots", default=False, action='store_true', help="Create plots?")
+    #parser.add_argument("--unknowns", default=False, action='store_true', help="Use UNKNOWN list?")
 
     if options is None:
         args = parser.parse_args()
@@ -41,6 +41,8 @@ def main(pargs=None):
 
     """
     import numpy as np
+    from astropy.table import vstack
+
     from linetools import utils as ltu
 
     from arclines import io as arcl_io
@@ -52,63 +54,76 @@ def main(pargs=None):
     spec = arcl_io.load_spectrum(pargs.spectrum)
     npix = spec.size
 
-    # Load line lists
-    lines = pargs.lines.split(',')
-    line_lists = arcl_io.load_line_lists(lines, unknown=True)
-    wvdata = line_lists['wave'].data  # NIST + Extra
-    isrt = np.argsort(wvdata)
-    wvdata = wvdata[isrt]
-
     # Lines
     all_tcent, cut_tcent, icut = arch_utils.arc_lines_from_spec(spec)#, siglev=siglev, min_ampl=min_ampl)
 
-    # Scan on wv_cen
-    swv_uncertainty=350.
-    wvoff=1000.
-    dcen = swv_uncertainty*0.8
-    wvcens = np.arange(pargs.wvcen-wvoff, pargs.wvcen+wvoff+dcen, dcen)
+    # Load line lists
+    lines = pargs.lines.split(',')
+    line_lists = arcl_io.load_line_lists(lines)
+    unknwns = arcl_io.load_unknown_list(lines)
+
+    #delta_wv = npix * pargs.disp
+    #in_spec = (wvdata > pargs.wvcen-delta_wv/2) & (wvdata < pargs.wvcen+delta_wv/2)
+    #nline_in = np.sum(in_spec)
+
+    #print("{:d} lines detected in the spectrum.".format(cut_tcent.size))
+    #print("Approximately {:d} lines to match against in your nominal wavelength range".format(nline_in))
+
+    # 3 things to fiddle:
+    #  pix_tol -- higher for fewer lines  1/2
+    #  unknowns -- on for fewer lines  off/on
+    #  scoring -- weaken for more lines ??
+
+
     # Best
     best_dict = dict(nmatch=0, ibest=-1, bwv=0.)
-    for ss,iwv_cen in enumerate(wvcens):
-        # Wavelength array
-        wave = iwv_cen + (np.arange(npix) - npix/2.)*pargs.disp
-        match_idx, scores = arch_patt.run_quad_match(cut_tcent, wave, wvdata,
-                                                 pargs.disp, swv_uncertainty=swv_uncertainty,
-                                                 pix_tol=2.)
-        # Score
-        mask = np.array([False]*len(all_tcent))
-        IDs = []
-        for kk,score in enumerate(scores):
-            if score in ['Perf', 'Good', 'Ok']:
-                mask[icut[kk]] = True
-                uni, counts = np.unique(match_idx[kk]['matches'], return_counts=True)
-                imx = np.argmax(counts)
-                IDs.append(wvdata[uni[imx]])
-            else:
-                IDs.append(0.)
-        ngd_match = np.sum(mask)
-        if ngd_match > best_dict['nmatch']:
-            best_dict['nmatch'] = ngd_match
-            best_dict['midx'] = match_idx
-            best_dict['scores'] = scores
-            best_dict['ibest'] = ss
-            best_dict['bwv'] = iwv_cen
-            best_dict['IDs'] = IDs
+
+    # Loop on unknowns
+    for unknown in [False, True]:
+        if unknown:
+            tot_list = vstack([line_lists,unknwns])
+        else:
+            tot_list = line_lists
+        wvdata = np.array(tot_list['wave'].data) # Removes mask if any
+        wvdata.sort()
+        sav_nmatch = best_dict['nmatch']
+
+        # Loop on pix_tol
+        for pix_tol in [1.,2.]:
+            # Scan on wavelengths
+            arch_patt.scan_for_matches(pargs.wvcen, pargs.disp, npix, cut_tcent, wvdata,
+                               best_dict=best_dict, pix_tol=pix_tol)
+        # Save linelist?
+        if best_dict['nmatch'] > sav_nmatch:
+            best_dict['line_list'] = tot_list
+            best_dict['unknown'] = unknown
+
     # Report
     print('---------------------------------------------------')
     print('Report:')
     print('::   Number of lines analyzed = {:d}'.format(cut_tcent.size))
     print('::   Number of Perf/Good/Ok matches = {:d}'.format(best_dict['nmatch']))
     print('::   Best central wavelength = {:g}A'.format(best_dict['bwv']))
+    print('::   Best solution used pix_tol = {}'.format(best_dict['pix_tol']))
+    print('::   Best solution had unknown = {}'.format(best_dict['unknown']))
     print('---------------------------------------------------')
+
+    debug=False
+    if debug:
+        match_idx = best_dict['midx']
+        for kk in match_idx.keys():
+            uni, counts = np.unique(match_idx[kk]['matches'], return_counts=True)
+            print('kk={}, {}, {}'.format(kk, counts, np.sum(counts)))
 
     # Write IDs
     out_dict = dict(pix=cut_tcent, IDs=best_dict['IDs'])
     jdict = ltu.jsonify(out_dict)
-    ltu.savejson(pargs.outroot+'.json', jdict, easy_to_read=True)
+    ltu.savejson(pargs.outroot+'.json', jdict, easy_to_read=True, overwrite=True)
     print("Wrote: {:s}".format(pargs.outroot+'.json'))
 
     # Plot
-    arcl_plots.match_qa(spec, cut_tcent, line_lists[isrt],
+    arcl_plots.match_qa(spec, cut_tcent, best_dict['line_list'],
                         best_dict['IDs'], best_dict['scores'], pargs.outroot+'.pdf')
     print("Wrote: {:s}".format(pargs.outroot+'.pdf'))
+    if debug:
+        pdb.set_trace()

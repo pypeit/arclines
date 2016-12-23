@@ -173,16 +173,15 @@ def match_qa(arc_spec, tcent, line_list, IDs, scores, outfile, title=None, path=
             clr = clrs[score]
         except KeyError:
             clr = 'gray'
+        yline = np.max(arc_spec[int(x)-2:int(x)+2])
+        mn_yline = min(mn_yline, yline)
+        # Tick mark
+        ax_spec.plot([x,x], [yline+ysep*0.25, yline+ysep], '-', color=clr)
         if score in ['Perf', 'Good', 'Ok']:
             # Label
             imin = np.argmin(np.abs(line_list['wave']-IDs[kk]))
             row = line_list[imin]
             lbl = '{:s} {:.4f}'.format(row['ion'], row['wave'])
-            #
-            yline = np.max(arc_spec[int(x)-2:int(x)+2])
-            mn_yline = min(mn_yline, yline)
-            # Tick mark
-            ax_spec.plot([x,x], [yline+ysep*0.25, yline+ysep], '-', color=clr)
             # label
             ax_spec.text(x, yline+ysep*1.3, '{:s}'.format(lbl), ha='center', va='bottom',
                 size=idfont, rotation=90., color=clr)

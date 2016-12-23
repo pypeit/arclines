@@ -114,6 +114,47 @@ def run_quad_match(tcent, twave, llist_wv, disp, swv_uncertainty=250.,
     return match_idx, scores
 
 
+def scan_for_matches(wvcen, disp, npix, cut_tcent, wvdata, best_dict=None,
+                     swv_uncertainty=350., wvoff=1000., pix_tol=2.):
+
+    # Setup
+    dcen = swv_uncertainty*0.8
+    wvcens = np.arange(wvcen-wvoff, wvcen+wvoff+dcen, dcen)
+    # Best
+    if best_dict is None:
+        best_dict = dict(nmatch=0, ibest=-1, bwv=0.)
+
+    # Scan on wv_cen
+    for ss,iwv_cen in enumerate(wvcens):
+        # Wavelength array
+        wave = iwv_cen + (np.arange(npix) - npix/2.)*disp
+        match_idx, scores = run_quad_match(cut_tcent, wave, wvdata, disp,
+                                           swv_uncertainty=swv_uncertainty,
+                                           pix_tol=pix_tol)
+        # Score
+        mask = np.array([False]*len(cut_tcent))
+        IDs = []
+        for kk,score in enumerate(scores):
+            if score in ['Perf', 'Good', 'Ok']:
+                mask[kk] = True
+                uni, counts = np.unique(match_idx[kk]['matches'], return_counts=True)
+                imx = np.argmax(counts)
+                IDs.append(wvdata[uni[imx]])
+            else:
+                IDs.append(0.)
+        ngd_match = np.sum(mask)
+        if ngd_match > best_dict['nmatch']:
+            best_dict['nmatch'] = ngd_match
+            best_dict['midx'] = match_idx
+            best_dict['scores'] = scores
+            best_dict['ibest'] = ss
+            best_dict['bwv'] = iwv_cen
+            best_dict['IDs'] = IDs
+            # Search parameters
+            best_dict['swv_uncertainty'] = swv_uncertainty
+            best_dict['wvoff'] = wvoff
+            best_dict['pix_tol'] = pix_tol
+
 def score_quad_matches(fidx):
     """  Grades quad_match results
     Parameters
