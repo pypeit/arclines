@@ -11,6 +11,7 @@ from astropy.table import Table, Column, vstack
 
 import arclines # For path
 from arclines import defs
+line_path = arclines.__path__[0]+'/data/lists/'
 
 
 def load_by_hand():
@@ -43,11 +44,12 @@ def load_by_hand():
     return line_list[['ion', 'wave', 'NIST', 'Instr', 'amplitude', 'Source']]
 
 
-def load_line_list(line_file, add_path=False):
+def load_line_list(line_file, add_path=False, use_ion=False):
     """
     Parameters
     ----------
     line_file : str
+      Full path to line_list or name of ion
     add_path : bool, optional
       Not yet implemented
 
@@ -56,6 +58,8 @@ def load_line_list(line_file, add_path=False):
     line_list : Table
 
     """
+    if use_ion:
+        line_file = line_path+'{:s}_lines.dat'.format(line_file)
     line_list = Table.read(line_file, format='ascii.fixed_width', comment='#')
     # Return
     return line_list
@@ -77,7 +81,6 @@ def load_line_lists(lines, unknown=False, skip=False, all=False):
 
     """
     import glob
-    line_path = arclines.__path__[0]+'/data/lists/'
 
     # All?
     if all:
@@ -175,12 +178,15 @@ def load_nist(ion):
     return nist_tbl
 
 
-def load_unknown_list(lines, unknwn_file=None):
+def load_unknown_list(lines, unknwn_file=None, all=False):
     """
     Parameters
     ----------
     lines : list
+      Restricted lines;  use all=True for all
     unknwn_file : str, optional
+    all : bool, optional
+
 
     Returns
     -------
@@ -192,15 +198,18 @@ def load_unknown_list(lines, unknwn_file=None):
     line_path = arclines.__path__[0]+'/data/lists/'
     if unknwn_file is None:
         unknwn_file = line_path+'UNKNWNs.dat'
-    # Cut on input lamps
     line_list = load_line_list(unknwn_file)
-    msk = np.array([False]*len(line_list))
-    for line in lines:
-        line_flag = line_dict[line]
-        match = line_list['line_flag'] % (2*line_flag) >= line_flag
-        msk[match] = True
-    # Finish
-    return line_list[msk]
+    # Cut on input lamps?
+    if all:
+        return line_list
+    else:
+        msk = np.array([False]*len(line_list))
+        for line in lines:
+            line_flag = line_dict[line]
+            match = line_list['line_flag'] % (2*line_flag) >= line_flag
+            msk[match] = True
+        # Finish
+        return line_list[msk]
 
 
 def write_line_list(tbl, outfile):

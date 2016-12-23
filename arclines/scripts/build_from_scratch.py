@@ -51,7 +51,7 @@ def main(args=None):
 
     print("=============================================================")
     print("This script is for EXPERTS ONLY")
-    print("Continue if you know what you are doing")
+    print("Continue only if you know what you are doing")
     print("Otherwise exit")
     print("p.s.  You need to remove the files you wish to re-build")
     print("=============================================================")
@@ -89,7 +89,7 @@ def main(args=None):
             print("=============================================================")
             build_lists.source_to_unknowns(source, write=pargs.write)
 
-    # Unknowns
+    # Plots
     if pargs.plots:
         # Load all line lists
         line_lists = arcl_io.load_line_lists([], all=True, unknown=True)

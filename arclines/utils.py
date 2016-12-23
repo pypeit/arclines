@@ -22,6 +22,9 @@ def unique_ions(source, src_dict=None):
     """
     # Lines
     src_lines = source['Lines'].split(',')
+    if src_dict is None:
+        return src_lines
+    # Check, as applicable
     if src_dict['ID_lines'] is not None:
         uions = np.unique(src_dict['ID_lines']['ion'].data)
         for src_line in src_lines:
@@ -33,7 +36,7 @@ def unique_ions(source, src_dict=None):
 
 
 def vette_unkwn_against_lists(U_lines, uions, tol_NIST=0.2, NIST_only=False,
-                              tol_llist=1., verbose=False):
+                              tol_llist=2., verbose=False):
     """ Query unknown lines against NIST database
 
     Parameters

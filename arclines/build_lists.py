@@ -18,6 +18,7 @@ from arclines import defs
 import arclines # For path
 llist_path = arclines.__path__[0]+'/data/lists/'
 src_path = arclines.__path__[0]+'/data/sources/'
+unk_file = llist_path+'UNKNWNs.dat'
 
 
 def by_hand(llist_dict, write=False):
@@ -157,6 +158,30 @@ def get_line_flag(ions):
     return line_flag
 
 
+def purge_unknowns(line_list, write=False, tol_llist=2., verbose=True):
+
+    line_dict = defs.lines()
+    # Load
+    unknwns = arcl_io.load_unknown_list([], all=True)
+    mask = np.array([True]*len(unknwns))
+    updated = False
+    # Loop
+    for ss,row in enumerate(unknwns):
+        dwv = np.abs(line_list['wave']-row['wave'])
+        imin = np.argmin(np.abs(dwv))
+        # Match?
+        if dwv[imin] < tol_llist:
+            line_flag = line_dict[line_list['ion'][imin]]
+            if row['line_flag'] % (2*line_flag) >= line_flag:
+                mask[ss] = False
+                updated = True
+                if verbose:
+                    print("Will purge UNKNOWN line \n {}".format(row))
+                    print("Matched to \n {}".format(line_list[imin]))
+    # Write?
+    if write and updated:
+        arcl_io.write_line_list(unknwns[mask], unk_file)
+
 def source_to_line_lists(source, write=False, llist_dict=None):
     """
     Parameters
@@ -198,10 +223,9 @@ def source_to_line_lists(source, write=False, llist_dict=None):
                 print("Generating line list:\n   {:s}".format(ion_file))
                 arcl_io.write_line_list(llist_dict[ion], ion_file)
         else:
-            try:
-                llist_dict[ion], updated = update_line_list(llist_dict[ion], sub_tbl, source['File'], source['Instr'])
-            except KeyError:
+            if ion not in llist_dict.keys():
                 raise KeyError("You are trying to build from scratch but didn't remove {:s}".format(ion_file))
+            llist_dict[ion], updated = update_line_list(llist_dict[ion], sub_tbl, source['File'], source['Instr'])
             # Write
             if write and updated:
                 arcl_io.write_line_list(llist_dict[ion], ion_file)
@@ -219,7 +243,6 @@ def source_to_unknowns(source, write=False, verbose=True):
     -------
 
     """
-    unk_file = llist_path+'UNKNWNs.dat'
 
     # Load
     src_dict = load_source.load(source)
@@ -244,10 +267,11 @@ def source_to_unknowns(source, write=False, verbose=True):
                              unknown=True, ions=uions)
             arcl_io.write_line_list(unknwn_list, unk_file)
     else: # Update
-        unknwn_list, updated = update_uline_list(U_lines[mask>0], source['File'], source['Instr'],
-                          unk_file, uions)
+        unknwn_list, updated = update_uline_list(U_lines[mask>0], source['File'], source['Instr'], uions)
         if write and updated:
             arcl_io.write_line_list(unknwn_list, unk_file)
+    # Return
+    return unknwn_list
 
 
 def update_line_list(line_list, new_lines, source_file, instr, tol_wave=0.1, NIST_tol=0.0001):
@@ -308,8 +332,8 @@ def update_line_list(line_list, new_lines, source_file, instr, tol_wave=0.1, NIS
     return line_list, updated
 
 
-def update_uline_list(new_lines, source_file, instr, unk_file,
-                      ions, tol_wave=0.5):
+def update_uline_list(new_lines, source_file, instr,
+                      ions, tol_wave=1.5):
     """ Update/add to UNKNWN line list as applicable
 
     Parameters
@@ -318,7 +342,6 @@ def update_uline_list(new_lines, source_file, instr, unk_file,
     source_file : str
     instr : str
       Converted to a flag
-    unk_file : str
     ions : list
 
     tol_wave : float, optional
