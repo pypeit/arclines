@@ -213,12 +213,19 @@ def main(flg_tst):
     if (flg_tst % 2**4) >= 2**3:
         generate_hdf('mmt_rcs_600_6310.sav', 'MMT_RCS', ['ArI', 'NeI'], 'MMT_RCS_600_6310.hdf5')
 
+    # MODS
+    if (flg_tst % 2**5) >= 2**4:
+        generate_hdf('mods_blue_400ms.sav', 'MODSb', ['XeI', 'KrI'], 'MODS_blue_400.hdf5')
+        generate_hdf('mods_red_670.sav', 'MODSr', ['NeI', 'ArI'], 'MODS_red_670.hdf5')
+
+
 # Test
 if __name__ == '__main__':
     flg_tst = 0
     #flg_tst += 2**0   # LRISb 600
     #flg_tst += 2**1   # LRISr 600
     #flg_tst += 2**2   # Kastb 600
-    flg_tst += 2**3   # MMT RCS 600_6310
+    #flg_tst += 2**3   # MMT RCS 600_6310
+    flg_tst += 2**4   # MODS
 
     main(flg_tst)
