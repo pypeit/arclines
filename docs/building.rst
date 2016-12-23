@@ -53,7 +53,10 @@ Add Source
 ==========
 
 The following steps will add a new arcline source to the database.
-Do them in the order below
+Do them in the order below.
+
+First and foremost:  Choose wisely.  Stick with sources that
+are well vetted.
 
 Code Edits
 ----------
