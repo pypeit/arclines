@@ -5,7 +5,34 @@ from __future__ import (print_function, absolute_import, division, unicode_liter
 import numpy as np
 
 
-def vette_unkwn_against_lists(U_lines, uions, tol_NIST=0.2,
+def unique_ions(source, src_dict=None):
+    """ Unique ions from src_dict and source
+    of just the source
+
+    Parameters
+    ----------
+    src_dict
+    source
+
+    Returns
+    -------
+    uions : ndarray
+      str array of unique ions
+
+    """
+    # Lines
+    src_lines = source['Lines'].split(',')
+    if src_dict['ID_lines'] is not None:
+        uions = np.unique(src_dict['ID_lines']['ion'].data)
+        for src_line in src_lines:
+            if src_line not in uions.tolist():
+                raise ValueError("Line {:s} not found in ID_lines".format(src_line))
+        return uions
+    else:
+        return src_lines
+
+
+def vette_unkwn_against_lists(U_lines, uions, tol_NIST=0.2, NIST_only=False,
                               tol_llist=1., verbose=False):
     """ Query unknown lines against NIST database
 
@@ -52,11 +79,13 @@ def vette_unkwn_against_lists(U_lines, uions, tol_NIST=0.2,
                     print("UNKNWN Matched to NIST: ion={:s} {:g} with {:g}".format(
                         ion,nist['wave'][imin], row['wave']))
                 #print(nist[['Ion','wave','RelInt','Aki']][imin])
+    if NIST_only:
+        return mask, wv_match
 
     # Our line lists
     line_list = arcl_io.load_line_lists(uions, skip=True)
     if line_list is None:
-        return mask
+        return mask, wv_match
     for ss,row in enumerate(U_lines):
         dwv = np.abs(line_list['wave']-row['wave'])
         imin = np.argmin(np.abs(dwv))

@@ -20,7 +20,8 @@ str_len_dict = defs.str_len()
 instr_dict = defs.instruments()
 line_dict = defs.lines()
 
-def load(src_file, format, ions, **kwargs):
+
+def load(source, **kwargs):
     """
     Parameters
     ----------
@@ -31,18 +32,21 @@ def load(src_file, format, ions, **kwargs):
     -------
 
     """
+    # Parse
+    src_file = source['File']
+    format = source['Format']
+    ions = source['Lines'].split(',')
+    wvmnx=[source['wvmin'], source['wvmax']]
     # Load
     if format == 'PYPIT1':
-        ID_lines, U_lines = load_pypit(1, src_file, ions, **kwargs)
+        src_dict = load_pypit(1, src_file, ions, **kwargs)
     elif format == 'LRDX1':
-        ID_lines, U_lines = load_low_redux(1, src_file, ions, **kwargs)
+        src_dict = load_low_redux(1, src_file, ions, wvmnx=wvmnx, **kwargs)
     else:
         raise IOError("Format {:s} for source {:s} is not supported".format(
                 format, src_file))
-    # Reject lines
-
     # Return
-    return ID_lines, U_lines
+    return src_dict
 
 
 def load_pypit(version, src_file, ions, plot=False, **kwargs):
@@ -137,7 +141,10 @@ def load_pypit(version, src_file, ions, plot=False, **kwargs):
                            extras=pextras)
 
     # Return
-    return ID_lines, U_lines
+    return mk_src_dict(ID_lines=ID_lines, U_lines=U_lines,
+                       spec=np.array(pypit_fit['spec']), wave=wave,
+                       xIDs=np.array(pypit_fit['xfit'])*(npix-1),
+                       epix=epix)
 
 
 def load_low_redux(version, src_file, ions, plot=False, min_hist=10,
@@ -154,6 +161,7 @@ def load_low_redux(version, src_file, ions, plot=False, min_hist=10,
     -------
 
     """
+    import warnings
     if version != 1:
         raise IOError("Unimplemented version!")
 
@@ -163,7 +171,11 @@ def load_low_redux(version, src_file, ions, plot=False, min_hist=10,
     from arclines.io import load_line_lists
 
     # Load existing line lists
-    line_list = load_line_lists(ions)
+    line_list = load_line_lists(ions, skip=True)
+    if line_list is None:  # Should be a 'by scratch case'
+        warnings.warn("No line lists found matching your ions: {}".format(ions))
+        print("I hope you are building from scratch here..")
+        return mk_src_dict()
     wvdata = line_list['wave'].data
 
     # Open
@@ -240,26 +252,29 @@ def load_low_redux(version, src_file, ions, plot=False, min_hist=10,
     U_lines['NIST'] = 0
     U_lines['amplitude'] = final_amps
 
+    # Find the best spectrum
+    max_nex = 0
+    for ispec in range(mdict['nspec']):
+        spec = hdf['arcs/'+str(ispec)+'/spec'].value
+        wave = hdf['arcs/'+str(ispec)+'/wave'].value # vacuum
+        minwv, maxwv = np.min(wave), np.max(wave)
+        nex = np.sum((final_extras>minwv) & (final_extras<maxwv))
+        if nex > max_nex:
+            svi = ispec
+            max_nex = nex
+    # Find pixel values
+    spec = hdf['arcs/'+str(svi)+'/spec'].value
+    wave = hdf['arcs/'+str(svi)+'/wave'].value  # vacuum
+
+    # Extras
+    fpix = interp1d(wave, np.arange(npix))#, kind='cubic')
+    epix=fpix(final_extras)
+
     # Plot??
     if plot:
         # Match to NIST
         mask, wv_match = arcl_utils.vette_unkwn_against_lists(U_lines, ions)
-        # Find the best spectrum
-        max_nex = 0
-        for ispec in range(mdict['nspec']):
-            spec = hdf['arcs/'+str(ispec)+'/spec'].value
-            wave = hdf['arcs/'+str(ispec)+'/wave'].value # vacuum
-            minwv, maxwv = np.min(wave), np.max(wave)
-            nex = np.sum((final_extras>minwv) & (final_extras<maxwv))
-            if nex > max_nex:
-                svi = ispec
-                max_nex = nex
-        # Find pixel values
-        spec = hdf['arcs/'+str(svi)+'/spec'].value
-        wave = hdf['arcs/'+str(svi)+'/wave'].value # vacuum
         npix = wave.size
-        fpix = interp1d(wave, np.arange(npix))#, kind='cubic')
-        pextras = dict(x=fpix(final_extras), IDs=[])
         for ss,fex in enumerate(final_extras):
             if mask[ss] == 2:  # Matched to NIST
                 lbl = '{:.4f}'.format(fex) + ' [{:s}]'.format(wv_match[ss])
@@ -273,7 +288,36 @@ def load_low_redux(version, src_file, ions, plot=False, min_hist=10,
                            extras=pextras)
 
     # Return
-    return None, U_lines
+    return mk_src_dict(U_lines=U_lines, epix=epix, spec=spec, wave=wave)
 
 
+def mk_src_dict(**kwargs):
+    """
+    Parameters
+    ----------
+    ID_lines
+    U_lines
+    spec
+    wave
 
+    Returns
+    -------
+
+    """
+    src_dict = {}
+    #
+    req_keys = []
+    fill_keys = ['ID_lines', 'U_lines', 'spec', 'wave', 'xIDs']
+    optional_keys = ['epix', 'uions']
+    allowed_keys = req_keys + fill_keys + optional_keys
+
+    # Parse
+    for key in allowed_keys:
+        if key in kwargs.keys():
+            src_dict[key] = kwargs[key]
+        else:
+            if key in fill_keys:
+                src_dict[key] = None
+
+    # Return
+    return src_dict
