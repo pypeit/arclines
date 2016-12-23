@@ -21,7 +21,7 @@ def parser(options=None):
     parser.add_argument("disp", type=float, help="Accurate dispersion (Ang/pix)")
     parser.add_argument("lines", type=str, help="Comma separated list of lamps")
     parser.add_argument("--outroot", default='tmp_matches', action='store_true', help="Root filename for plot, IDs")
-    parser.add_argument("--min_ampl", type=float, help="Minimum amplitude for line analysis")
+    parser.add_argument("--min_ampl", type=float, help="Minimum amplitude for line analysis [default: 100.]")
     #parser.add_argument("--unknowns", default=False, action='store_true', help="Use UNKNOWN list?")
 
     if options is None:
