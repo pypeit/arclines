@@ -21,6 +21,7 @@ def parser(options=None):
     parser.add_argument("disp", type=float, help="Accurate dispersion (Ang/pix)")
     parser.add_argument("lines", type=str, help="Comma separated list of lamps")
     parser.add_argument("--outroot", default='tmp_matches', action='store_true', help="Root filename for plot, IDs")
+    parser.add_argument("--min_ampl", type=float, help="Minimum amplitude for line analysis")
     #parser.add_argument("--unknowns", default=False, action='store_true', help="Use UNKNOWN list?")
 
     if options is None:
@@ -50,12 +51,15 @@ def main(pargs=None):
     from arclines.holy import utils as arch_utils
     from arclines.holy import patterns as arch_patt
 
+    # Defaults
+    min_ampl = (pargs.min_ampl if (pargs.min_ampl is not None) else 100.)
+
     # Load spectrum
     spec = arcl_io.load_spectrum(pargs.spectrum)
     npix = spec.size
 
     # Lines
-    all_tcent, cut_tcent, icut = arch_utils.arc_lines_from_spec(spec)#, siglev=siglev, min_ampl=min_ampl)
+    all_tcent, cut_tcent, icut = arch_utils.arc_lines_from_spec(spec, min_ampl=min_ampl)
 
     # Load line lists
     lines = pargs.lines.split(',')
@@ -101,6 +105,7 @@ def main(pargs=None):
     # Report
     print('---------------------------------------------------')
     print('Report:')
+    print('::   Number of lines recovered = {:d}'.format(all_tcent.size))
     print('::   Number of lines analyzed = {:d}'.format(cut_tcent.size))
     print('::   Number of Perf/Good/Ok matches = {:d}'.format(best_dict['nmatch']))
     print('::   Best central wavelength = {:g}A'.format(best_dict['bwv']))
