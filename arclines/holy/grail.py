@@ -8,11 +8,13 @@ import pdb
 from arclines import io as arcl_io
 from arclines.holy import patterns as arch_patt
 from arclines.holy import fitting as arch_fit
+from arclines.holy import utils as arch_utils
 from arclines.pypit_utils import find_peaks
 
 
 def basic(spec, lines, wv_cen, disp, siglev=20., min_ampl=300.,
-          swv_uncertainty=350., pix_tol=2, plot_fil=None, min_match=5):
+          swv_uncertainty=350., pix_tol=2, plot_fil=None, min_match=5,
+          **kwargs):
     """ Basic holy grail algorithm
 
     Parameters
@@ -43,15 +45,7 @@ def basic(spec, lines, wv_cen, disp, siglev=20., min_ampl=300.,
     wvdata = wvdata[isrt]
 
     # Find peaks
-    tampl, tcent, twid, w, yprep = find_peaks(spec, siglev=siglev)
-    all_tcent = tcent[w]
-    all_tampl = tampl[w]
-
-    # Cut on Amplitude??
-    cut_amp = all_tampl > min_ampl
-    cut_tcent = all_tcent[cut_amp]
-    icut = np.where(cut_amp)[0]
-    nlin = cut_tcent.size
+    all_tcent, cut_tcent, icut = arch_utils.arc_lines_from_spec(spec, siglev=siglev, min_ampl=min_ampl)
 
     # Matching
     match_idx, scores = arch_patt.run_quad_match(cut_tcent, wave, wvdata,
