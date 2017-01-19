@@ -116,6 +116,23 @@ def run_quad_match(tcent, twave, llist_wv, disp, swv_uncertainty=250.,
 
 def scan_for_matches(wvcen, disp, npix, cut_tcent, wvdata, best_dict=None,
                      swv_uncertainty=350., wvoff=1000., pix_tol=2.):
+    """
+    Parameters
+    ----------
+    wvcen
+    disp
+    npix
+    cut_tcent
+    wvdata
+    best_dict
+    swv_uncertainty
+    wvoff
+    pix_tol
+
+    Returns
+    -------
+    best_dict is updated in place
+    """
 
     # Setup
     dcen = swv_uncertainty*0.8

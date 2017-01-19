@@ -22,7 +22,7 @@ def parser(options=None):
     parser.add_argument("lines", type=str, help="Comma separated list of lamps")
     parser.add_argument("--outroot", default='tmp_matches', action='store_true', help="Root filename for plot, IDs")
     parser.add_argument("--min_ampl", type=float, help="Minimum amplitude for line analysis [default: 100.]")
-    #parser.add_argument("--unknowns", default=False, action='store_true', help="Use UNKNOWN list?")
+    parser.add_argument("--debug", default=False, action='store_true', help="Debug")
 
     if options is None:
         args = parser.parse_args()
@@ -113,12 +113,17 @@ def main(pargs=None):
     print('::   Best solution had unknown = {}'.format(best_dict['unknown']))
     print('---------------------------------------------------')
 
-    debug=False
-    if debug:
+    if pargs.debug:
         match_idx = best_dict['midx']
         for kk in match_idx.keys():
             uni, counts = np.unique(match_idx[kk]['matches'], return_counts=True)
-            print('kk={}, {}, {}'.format(kk, counts, np.sum(counts)))
+            print('kk={}, {}, {}, {}'.format(kk, uni, counts, np.sum(counts)))
+
+    # Write scores
+    #out_dict = best_dict['scores']
+    #jdict = ltu.jsonify(out_dict)
+    #ltu.savejson(pargs.outroot+'.scores', jdict, easy_to_read=True, overwrite=True)
+    #print("Wrote: {:s}".format(pargs.outroot+'.scores'))
 
     # Write IDs
     out_dict = dict(pix=cut_tcent, IDs=best_dict['IDs'])
@@ -130,5 +135,5 @@ def main(pargs=None):
     arcl_plots.match_qa(spec, cut_tcent, best_dict['line_list'],
                         best_dict['IDs'], best_dict['scores'], pargs.outroot+'.pdf')
     print("Wrote: {:s}".format(pargs.outroot+'.pdf'))
-    if debug:
+    if pargs.debug:
         pdb.set_trace()
