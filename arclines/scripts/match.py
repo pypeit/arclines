@@ -23,6 +23,7 @@ def parser(options=None):
     parser.add_argument("--outroot", default='tmp_matches', action='store_true', help="Root filename for plot, IDs")
     parser.add_argument("--min_ampl", type=float, help="Minimum amplitude for line analysis [default: 100.]")
     parser.add_argument("--debug", default=False, action='store_true', help="Debug")
+    parser.add_argument("--fit", default=False, action='store_true', help="Fit the lines?")
 
     if options is None:
         args = parser.parse_args()
@@ -50,6 +51,8 @@ def main(pargs=None):
     from arclines import plots as arcl_plots
     from arclines.holy import utils as arch_utils
     from arclines.holy import patterns as arch_patt
+    from arclines.holy import fitting as arch_fit
+
 
     # Defaults
     min_ampl = (pargs.min_ampl if (pargs.min_ampl is not None) else 100.)
@@ -130,6 +133,14 @@ def main(pargs=None):
     jdict = ltu.jsonify(out_dict)
     ltu.savejson(pargs.outroot+'.json', jdict, easy_to_read=True, overwrite=True)
     print("Wrote: {:s}".format(pargs.outroot+'.json'))
+
+    # Fit
+    if pargs.fit:
+        NIST_lines = line_lists['NIST'] > 0
+        ifit = np.where(best_dict['mask'])[0]
+        pdb.set_trace()
+        final_fit = arch_fit.iterative_fitting(spec, cut_tcent, ifit, np.array(best_dict['IDs'])[ifit], line_lists[NIST_lines], pargs.disp, plot_fil='tmp_fit.pdf')
+        print("Wrote: tmp_fit.pdf")
 
     # Plot
     arcl_plots.match_qa(spec, cut_tcent, best_dict['line_list'],

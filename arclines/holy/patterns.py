@@ -163,6 +163,7 @@ def scan_for_matches(wvcen, disp, npix, cut_tcent, wvdata, best_dict=None,
         if ngd_match > best_dict['nmatch']:
             best_dict['nmatch'] = ngd_match
             best_dict['midx'] = match_idx
+            best_dict['mask'] = mask
             best_dict['scores'] = scores
             best_dict['ibest'] = ss
             best_dict['bwv'] = iwv_cen
