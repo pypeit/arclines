@@ -19,10 +19,13 @@ def basic(spec, lines, wv_cen, disp, siglev=20., min_ampl=300.,
 
     Parameters
     ----------
-    spec
-    lines
-    wv_cen
-    disp
+    spec : spectrum
+    lines : list
+      List of arc lamps on
+    wv_cen : float
+      Guess at central wavelength
+    disp : float
+      Dispersion A/pix
     siglev
     min_ampl
     swv_uncertainty

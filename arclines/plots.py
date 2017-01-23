@@ -40,7 +40,7 @@ def show_source(src_dict, line_lists, outfile, title=None, path=None, clobber=Fa
     iext = outfile.rfind('.')
 
     # Begin
-    if os.path.isfile(plot_path+outfile):
+    if os.path.isfile(plot_path+outfile) and (not clobber):
         print("Plot {:s} exists.  Remove if you wish to remake it".format(outfile))
         return
 
@@ -50,7 +50,9 @@ def show_source(src_dict, line_lists, outfile, title=None, path=None, clobber=Fa
     # In line_list?
     def chk_line_list(wave):
         mtw = np.where(np.abs(line_lists['wave']-row['wave']) < 1e-3)[0]
-        if len(mtw) != 1:
+        if len(mtw) == 0:
+            return -1
+        elif len(mtw) != 1:
             pdb.set_trace()
         # Source used?
         if outfile[:iext] in line_lists['Source'][mtw[0]]:
@@ -87,6 +89,8 @@ def show_source(src_dict, line_lists, outfile, title=None, path=None, clobber=Fa
             # Color
             if mask[ss] == 0: # In Line list
                 extras['clrs'].append('gray')
+            elif mask[ss] == -1: # Assuming Unknowns skipped
+                extras['clrs'].append('brown')
             else:
                 in_llist = chk_line_list(row['wave'])
                 extras['clrs'].append(clrs[in_llist])
@@ -145,6 +149,7 @@ def show_source(src_dict, line_lists, outfile, title=None, path=None, clobber=Fa
     pp.savefig(bbox_inches='tight')
     pp.close()
     plt.close()
+    print("Wrote {:s}".format(outfile))
     return
 
 def match_qa(arc_spec, tcent, line_list, IDs, scores, outfile, title=None, path=None):
