@@ -138,7 +138,6 @@ def main(pargs=None):
     if pargs.fit:
         NIST_lines = line_lists['NIST'] > 0
         ifit = np.where(best_dict['mask'])[0]
-        pdb.set_trace()
         final_fit = arch_fit.iterative_fitting(spec, cut_tcent, ifit, np.array(best_dict['IDs'])[ifit], line_lists[NIST_lines], pargs.disp, plot_fil='tmp_fit.pdf')
         print("Wrote: tmp_fit.pdf")
 
