@@ -97,7 +97,8 @@ def basic(spec, lines, wv_cen, disp, siglev=20., min_ampl=300.,
 
 
 def semi_brute(spec, lines, wv_cen, disp, siglev=20., min_ampl=300.,
-               outroot=None, debug=False, do_fit=True, verbose=False):
+               outroot=None, debug=False, do_fit=True, verbose=False,
+               fit_parm=None):
     # imports
     from astropy.table import vstack
     from linetools import utils as ltu
@@ -177,9 +178,16 @@ def semi_brute(spec, lines, wv_cen, disp, siglev=20., min_ampl=300.,
             plot_fil = outroot+'_fit.pdf'
         else:
             plot_fil = None
+        # Purge UNKNOWNS from ifit
+        imsk = np.array([True]*len(ifit))
+        for kk, idwv in enumerate(np.array(best_dict['IDs'])[ifit]):
+            if np.min(np.abs(line_lists['wave'][NIST_lines]-idwv)) > 0.01:
+                imsk[kk] = False
+        ifit = ifit[imsk]
+        # Fit
         final_fit = arch_fit.iterative_fitting(spec, cut_tcent, ifit,
                                                np.array(best_dict['IDs'])[ifit], line_lists[NIST_lines],
-                                               disp, plot_fil=plot_fil, verbose=verbose)
+                                               disp, plot_fil=plot_fil, verbose=verbose, aparm=fit_parm)
         print("Wrote: tmp_fit.pdf")
 
     # Plot
