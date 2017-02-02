@@ -10,6 +10,8 @@ import pdb
 from astropy.table import Table, Column, vstack
 from astropy.io import fits
 
+from linetools import utils as ltu
+
 import arclines # For path
 from arclines import defs
 line_path = arclines.__path__[0]+'/data/lists/'
@@ -240,6 +242,12 @@ def load_spectrum(spec_file, index=0):
             spec = hdf['arcs/'+str(index)+'/spec'].value
         else:
             raise IOError("Not ready for this hdf5 file")
+    elif 'json' in spec_file[iext:]:
+        jdict = ltu.loadjson(spec_file)
+        try:
+            spec = np.array(jdict['spec'])
+        except KeyError:
+            raise IOError("spec not in your JSON dict")
     # Return
     return spec
 
