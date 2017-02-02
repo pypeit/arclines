@@ -8,7 +8,7 @@ import pdb
 
 
 def iterative_fitting(spec, tcent, ifit, IDs, llist, disp, plot_fil=None,
-                      verbose=False):
+                      verbose=False, load_pypit=False):
 
     aparm = dict(llist='',
                     disp=disp,             # Ang/unbinned pixel
@@ -20,11 +20,13 @@ def iterative_fitting(spec, tcent, ifit, IDs, llist, disp, plot_fil=None,
                     nsig_rej=2.,         # Number of sigma for rejection
                     nsig_rej_final=3.0)  # Number of sigma for rejection (final fit)
     # PYPIT
-    from pypit import pyputils
-    msgs = pyputils.get_dummy_logger()
+    if load_pypit:
+        from pypit import pyputils
+        msgs = pyputils.get_dummy_logger()
     from pypit import arutils
     from pypit import arqa
-    arutils.dummy_settings()
+    if load_pypit:
+        arutils.dummy_settings()
 
     npix = spec.size
 
