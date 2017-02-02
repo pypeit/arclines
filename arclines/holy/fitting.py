@@ -8,9 +8,10 @@ import pdb
 
 
 def iterative_fitting(spec, tcent, ifit, IDs, llist, disp, plot_fil=None,
-                      verbose=False):
+                      verbose=False, load_pypit=False, aparm=None):
 
-    aparm = dict(llist='',
+    if aparm is None:
+        aparm = dict(llist='',
                     disp=disp,             # Ang/unbinned pixel
                     disp_toler=0.1,      # 10% tolerance
                     match_toler=3.,      # Matcing tolerance (pixels)
@@ -20,11 +21,13 @@ def iterative_fitting(spec, tcent, ifit, IDs, llist, disp, plot_fil=None,
                     nsig_rej=2.,         # Number of sigma for rejection
                     nsig_rej_final=3.0)  # Number of sigma for rejection (final fit)
     # PYPIT
-    from pypit import pyputils
-    msgs = pyputils.get_dummy_logger()
+    if load_pypit:
+        from pypit import pyputils
+        msgs = pyputils.get_dummy_logger()
     from pypit import arutils
     from pypit import arqa
-    arutils.dummy_settings()
+    if load_pypit:
+        arutils.dummy_settings()
 
     npix = spec.size
 
@@ -44,15 +47,11 @@ def iterative_fitting(spec, tcent, ifit, IDs, llist, disp, plot_fil=None,
         mask, fit = arutils.robust_polyfit(xfit, yfit, n_order, function=aparm['func'], sigma=aparm['nsig_rej'], minv=fmin, maxv=fmax)
 
         rms_ang = arutils.calc_fit_rms(xfit[mask==0], yfit[mask==0],
-                                       fit, aparm['func'], fmin=fmin, fmax=fmax)
+                                       fit, aparm['func'], minv=fmin, maxv=fmax)
         rms_pix = rms_ang/disp
         if verbose:
             print("RMS = {:g}".format(rms_pix))
         # DEBUG
-        #if msgs._debug['arc']:
-        #    debugger.xpcol(xfit,yfit)
-            #wave = arutils.func_val(fit, np.arange(slf._msarc.shape[0]), aparm['func'], min=fmin, max=fmax)
-            #xdb.xplot(xfit,yfit,scatter=True,xtwo=np.arange(slf._msarc.shape[0]), ytwo=wave)
         # Reject but keep originals (until final fit)
         ifit = list(ifit[mask == 0]) + sv_ifit
         # Find new points (should we allow removal of the originals?)
@@ -61,16 +60,14 @@ def iterative_fitting(spec, tcent, ifit, IDs, llist, disp, plot_fil=None,
             mn = np.min(np.abs(iwave-llist['wave']))
             if mn/aparm['disp'] < aparm['match_toler']:
                 imn = np.argmin(np.abs(iwave-llist['wave']))
-                if verbose:
-                    print('Adding {:g} at {:g}'.format(llist['wave'][imn],tcent[ss]))
+                #if verbose:
+                #    print('Adding {:g} at {:g}'.format(llist['wave'][imn],tcent[ss]))
                 # Update and append
                 all_ids[ss] = llist['wave'][imn]
                 all_idsion[ss] = llist['ion'][imn]
                 ifit.append(ss)
         # Keep unique ones
         ifit = np.unique(np.array(ifit,dtype=int))
-        #if msgs._debug['arc']:
-        #    debugger.set_trace()
         # Increment order
         if n_order < (aparm['n_final']+2):
             n_order += 1
@@ -87,8 +84,9 @@ def iterative_fitting(spec, tcent, ifit, IDs, llist, disp, plot_fil=None,
         xrej = xfit[irej]
         yrej = yfit[irej]
         if verbose:
-            for imask in irej:
-                msgs.info('Rejecting arc line {:g}'.format(yfit[imask]))
+            for kk,imask in enumerate(irej):
+                wave = arutils.func_val(fit, xrej[kk], aparm['func'], minv=fmin, maxv=fmax)
+                print('Rejecting arc line {:g}; {:g}'.format(yfit[imask], wave))
     else:
         xrej = []
         yrej = []
@@ -97,7 +95,7 @@ def iterative_fitting(spec, tcent, ifit, IDs, llist, disp, plot_fil=None,
     ions = all_idsion[ifit][mask==0]
     # Final RMS
     rms_ang = arutils.calc_fit_rms(xfit, yfit, fit, aparm['func'],
-                                   fmin=fmin, fmax=fmax)
+                                   minv=fmin, maxv=fmax)
     rms_pix = rms_ang/disp
     #
     '''
