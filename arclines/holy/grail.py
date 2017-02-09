@@ -171,6 +171,7 @@ def semi_brute(spec, lines, wv_cen, disp, siglev=20., min_ampl=300.,
         print("Wrote: {:s}".format(outroot+'.json'))
 
     # Fit
+    final_fit = None
     if do_fit:
         NIST_lines = line_lists['NIST'] > 0
         ifit = np.where(best_dict['mask'])[0]
@@ -188,7 +189,8 @@ def semi_brute(spec, lines, wv_cen, disp, siglev=20., min_ampl=300.,
         final_fit = arch_fit.iterative_fitting(spec, cut_tcent, ifit,
                                                np.array(best_dict['IDs'])[ifit], line_lists[NIST_lines],
                                                disp, plot_fil=plot_fil, verbose=verbose, aparm=fit_parm)
-        print("Wrote: tmp_fit.pdf")
+        if plot_fil is not None:
+            print("Wrote: {:s}".format(plot_fil))
 
     # Plot
     if outroot is not None:
