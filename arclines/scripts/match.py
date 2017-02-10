@@ -20,7 +20,7 @@ def parser(options=None):
     parser.add_argument("wvcen", type=float, help="Guess at central wavelength (within 1000A)")
     parser.add_argument("disp", type=float, help="Accurate dispersion (Ang/pix)")
     parser.add_argument("lines", type=str, help="Comma separated list of lamps")
-    parser.add_argument("--outroot", default='tmp_matches', action='store_true', help="Root filename for plot, IDs")
+    parser.add_argument("--outroot", type=str, help="Root filename for plot, IDs")
     parser.add_argument("--min_ampl", type=float, help="Minimum amplitude for line analysis [default: 100.]")
     parser.add_argument("--debug", default=False, action='store_true', help="Debug")
     parser.add_argument("--fit", default=False, action='store_true', help="Fit the lines?")
@@ -52,6 +52,8 @@ def main(pargs=None):
     from arclines.holy import fitting as arch_fit
 
 
+    if pargs.outroot is None:
+        pargs.outroot = 'tmp_matches'
     # Defaults
     min_ampl = (pargs.min_ampl if (pargs.min_ampl is not None) else 100.)
 
