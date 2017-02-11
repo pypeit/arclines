@@ -8,7 +8,7 @@ import pdb
 
 
 def match_quad_to_list(spec_lines, line_list, wv_guess, dwv_guess,
-                  tol=2., dwv_uncertainty=0.2):
+                  tol=2., dwv_uncertainty=0.2, min_ftol=0.005):
     """
     Parameters
     ----------
@@ -27,7 +27,7 @@ def match_quad_to_list(spec_lines, line_list, wv_guess, dwv_guess,
     npix = spec_lines[-1]-spec_lines[0]
     spec_values = (spec_lines[1:-1]-spec_lines[0])/(
         spec_lines[-1]-spec_lines[0])
-    ftol = tol/npix
+    ftol = max(tol/npix, min_ftol)
     #
     possible_start = np.where((line_list > wv_guess[0]) & (line_list < wv_guess[1]))[0]
     possible_matches = []
@@ -106,6 +106,7 @@ def run_quad_match(tcent, twave, llist_wv, disp, swv_uncertainty=250.,
             for match in matches:
                 for ii in range(4):
                     match_idx[sidx[ii]]['matches'].append(match[ii])
+            #pdb.set_trace()
     # Score
     scores = score_quad_matches(match_idx)
     scores = np.array(scores)
@@ -115,7 +116,7 @@ def run_quad_match(tcent, twave, llist_wv, disp, swv_uncertainty=250.,
 
 
 def scan_for_matches(wvcen, disp, npix, cut_tcent, wvdata, best_dict=None,
-                     swv_uncertainty=350., wvoff=1000., pix_tol=2.):
+                     swv_uncertainty=350., wvoff=1000., pix_tol=2., ampl=None):
     """
     Parameters
     ----------
@@ -135,6 +136,8 @@ def scan_for_matches(wvcen, disp, npix, cut_tcent, wvdata, best_dict=None,
     """
 
     # Setup
+    #wvoff=10.
+    #pdb.set_trace()
     dcen = swv_uncertainty*0.8
     wvcens = np.arange(wvcen-wvoff, wvcen+wvoff+dcen, dcen)
     # Best
@@ -160,6 +163,7 @@ def scan_for_matches(wvcen, disp, npix, cut_tcent, wvdata, best_dict=None,
             else:
                 IDs.append(0.)
         ngd_match = np.sum(mask)
+        # Update in place
         if ngd_match > best_dict['nmatch']:
             best_dict['nmatch'] = ngd_match
             best_dict['midx'] = match_idx
@@ -172,6 +176,7 @@ def scan_for_matches(wvcen, disp, npix, cut_tcent, wvdata, best_dict=None,
             best_dict['swv_uncertainty'] = swv_uncertainty
             best_dict['wvoff'] = wvoff
             best_dict['pix_tol'] = pix_tol
+            best_dict['ampl'] = ampl
 
 def score_quad_matches(fidx):
     """  Grades quad_match results

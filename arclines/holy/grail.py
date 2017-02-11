@@ -98,7 +98,7 @@ def basic(spec, lines, wv_cen, disp, siglev=20., min_ampl=300.,
 
 def semi_brute(spec, lines, wv_cen, disp, siglev=20., min_ampl=300.,
                outroot=None, debug=False, do_fit=True, verbose=False,
-               fit_parm=None):
+               fit_parm=None, min_nmatch=0, lowest_ampl=200.):
     # imports
     from astropy.table import vstack
     from linetools import utils as ltu
@@ -113,7 +113,7 @@ def semi_brute(spec, lines, wv_cen, disp, siglev=20., min_ampl=300.,
     all_tcent, cut_tcent, icut = arch_utils.arc_lines_from_spec(spec, min_ampl=min_ampl)
 
     # Best
-    best_dict = dict(nmatch=0, ibest=-1, bwv=0.)
+    best_dict = dict(nmatch=0, ibest=-1, bwv=0., min_ampl=min_ampl)
 
     # 3 things to fiddle:
     #  pix_tol -- higher for fewer lines  1/2
@@ -135,10 +135,21 @@ def semi_brute(spec, lines, wv_cen, disp, siglev=20., min_ampl=300.,
             # Scan on wavelengths
             arch_patt.scan_for_matches(wv_cen, disp, npix, cut_tcent, wvdata,
                                       best_dict=best_dict, pix_tol=pix_tol)
+            # Lower minimum amplitude
+            ampl = min_ampl
+            while(best_dict['nmatch'] < min_nmatch):
+                ampl /= 2.
+                if ampl < lowest_ampl:
+                    break
+                all_tcent, cut_tcent, icut = arch_utils.arc_lines_from_spec(spec, min_ampl=ampl)
+                arch_patt.scan_for_matches(wv_cen, disp, npix, cut_tcent, wvdata,
+                                       best_dict=best_dict, pix_tol=pix_tol, ampl=ampl)
+
         # Save linelist?
         if best_dict['nmatch'] > sav_nmatch:
             best_dict['line_list'] = tot_list
             best_dict['unknown'] = unknown
+            best_dict['ampl'] = unknown
 
     # Report
     print('---------------------------------------------------')
@@ -170,9 +181,16 @@ def semi_brute(spec, lines, wv_cen, disp, siglev=20., min_ampl=300.,
         ltu.savejson(outroot+'.json', jdict, easy_to_read=True, overwrite=True)
         print("Wrote: {:s}".format(outroot+'.json'))
 
+    # Plot
+    if outroot is not None:
+        arcl_plots.match_qa(spec, cut_tcent, best_dict['line_list'],
+                            best_dict['IDs'], best_dict['scores'], outroot+'.pdf')
+        print("Wrote: {:s}".format(outroot+'.pdf'))
+
     # Fit
     final_fit = None
     if do_fit:
+        #
         NIST_lines = line_lists['NIST'] > 0
         ifit = np.where(best_dict['mask'])[0]
         if outroot is not None:
@@ -185,6 +203,14 @@ def semi_brute(spec, lines, wv_cen, disp, siglev=20., min_ampl=300.,
             if np.min(np.abs(line_lists['wave'][NIST_lines]-idwv)) > 0.01:
                 imsk[kk] = False
         ifit = ifit[imsk]
+        # Allow for weaker lines in the fit
+        all_tcent, weak_cut_tcent, icut = arch_utils.arc_lines_from_spec(spec, min_ampl=300.)
+        add_weak = []
+        for weak in weak_cut_tcent:
+            if np.min(np.abs(cut_tcent-weak)) > 5.:
+                add_weak += [weak]
+        if len(add_weak) > 0:
+            cut_tcent = np.concatenate([cut_tcent, np.array(add_weak)])
         # Fit
         final_fit = arch_fit.iterative_fitting(spec, cut_tcent, ifit,
                                                np.array(best_dict['IDs'])[ifit], line_lists[NIST_lines],
@@ -192,10 +218,5 @@ def semi_brute(spec, lines, wv_cen, disp, siglev=20., min_ampl=300.,
         if plot_fil is not None:
             print("Wrote: {:s}".format(plot_fil))
 
-    # Plot
-    if outroot is not None:
-        arcl_plots.match_qa(spec, cut_tcent, best_dict['line_list'],
-                        best_dict['IDs'], best_dict['scores'], outroot+'.pdf')
-        print("Wrote: {:s}".format(outroot+'.pdf'))
     # Return
-    return final_fit
+    return best_dict, final_fit
