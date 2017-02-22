@@ -99,6 +99,29 @@ def basic(spec, lines, wv_cen, disp, siglev=20., min_ampl=300.,
 def semi_brute(spec, lines, wv_cen, disp, siglev=20., min_ampl=300.,
                outroot=None, debug=False, do_fit=True, verbose=False,
                fit_parm=None, min_nmatch=0, lowest_ampl=200.):
+    """
+    Parameters
+    ----------
+    spec
+    lines
+    wv_cen
+    disp
+    siglev
+    min_ampl
+    outroot
+    debug
+    do_fit
+    verbose
+    fit_parm
+    min_nmatch
+    lowest_ampl
+
+    Returns
+    -------
+    best_dict : dict
+    final_fit : dict
+
+    """
     # imports
     from astropy.table import vstack
     from linetools import utils as ltu
@@ -150,6 +173,13 @@ def semi_brute(spec, lines, wv_cen, disp, siglev=20., min_ampl=300.,
             best_dict['line_list'] = tot_list
             best_dict['unknown'] = unknown
             best_dict['ampl'] = unknown
+
+    if best_dict['nmatch'] == 0:
+        print('---------------------------------------------------')
+        print('Report:')
+        print('::   No matches!  Could be you input a bad wvcen or disp value')
+        print('---------------------------------------------------')
+        return
 
     # Report
     print('---------------------------------------------------')
