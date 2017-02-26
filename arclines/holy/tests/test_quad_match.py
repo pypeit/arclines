@@ -10,7 +10,7 @@ import pdb
 from arclines import io as arcl_io
 from arclines.holy import patterns as arch_patt
 
-from xastropy.xutils import xdebug as xdb
+#from xastropy.xutils import xdebug as xdb
 
 
 def grade_fidx_results(fidx):

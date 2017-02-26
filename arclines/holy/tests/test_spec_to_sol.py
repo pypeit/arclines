@@ -9,7 +9,7 @@ import pdb
 
 from arclines.holy import grail
 
-from xastropy.xutils import xdebug as xdb
+#from xastropy.xutils import xdebug as xdb
 
 
 def test_basic(spec, lines, wv_cen, disp, siglev=20., min_ampl=300.,

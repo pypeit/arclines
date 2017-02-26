@@ -234,7 +234,7 @@ def semi_brute(spec, lines, wv_cen, disp, siglev=20., min_ampl=300.,
                 imsk[kk] = False
         ifit = ifit[imsk]
         # Allow for weaker lines in the fit
-        all_tcent, weak_cut_tcent, icut = arch_utils.arc_lines_from_spec(spec, min_ampl=300.)
+        all_tcent, weak_cut_tcent, icut = arch_utils.arc_lines_from_spec(spec, min_ampl=lowest_ampl)
         add_weak = []
         for weak in weak_cut_tcent:
             if np.min(np.abs(cut_tcent-weak)) > 5.:
