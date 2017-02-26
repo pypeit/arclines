@@ -202,7 +202,6 @@ def semi_brute(spec, lines, wv_cen, disp, siglev=20., min_ampl=300.,
     #out_dict = best_dict['scores']
     #jdict = ltu.jsonify(out_dict)
     #ltu.savejson(pargs.outroot+'.scores', jdict, easy_to_read=True, overwrite=True)
-    #print("Wrote: {:s}".format(pargs.outroot+'.scores'))
 
     # Write IDs
     if outroot is not None:
