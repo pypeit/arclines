@@ -15,6 +15,7 @@ from linetools import utils as ltu
 import arclines # For path
 from arclines import defs
 line_path = arclines.__path__[0]+'/data/lists/'
+nist_path = arclines.__path__[0]+'/data/NIST/'
 
 
 def load_by_hand():
@@ -47,7 +48,7 @@ def load_by_hand():
     return line_list[['ion', 'wave', 'NIST', 'Instr', 'amplitude', 'Source']]
 
 
-def load_line_list(line_file, add_path=False, use_ion=False):
+def load_line_list(line_file, add_path=False, use_ion=False, NIST=False):
     """
     Parameters
     ----------
@@ -55,6 +56,8 @@ def load_line_list(line_file, add_path=False, use_ion=False):
       Full path to line_list or name of ion
     add_path : bool, optional
       Not yet implemented
+    NIST : bool, optional
+      NIST formatted table?
 
     Returns
     -------
@@ -64,11 +67,28 @@ def load_line_list(line_file, add_path=False, use_ion=False):
     if use_ion:
         line_file = line_path+'{:s}_lines.dat'.format(line_file)
     line_list = Table.read(line_file, format='ascii.fixed_width', comment='#')
+    #  NIST?
+    if NIST:
+        line_list.remove_column('Ritz')
+        line_list.remove_column('Rel.')
+        line_list.remove_column('Aki')
+        line_list.remove_column('Acc.')
+        line_list.remove_column('Type')
+        gdrows = line_list['Observed'] > 0.  # Eliminate dummy lines
+        line_list = line_list[gdrows]
+        line_list.rename_column('Observed','wave')
+        # Grab ion name
+        i0 = line_file.rfind('/')
+        i1 = line_file.rfind('_')
+        ion = line_file[i0+1:i1]
+        line_list.add_column(Column([ion]*len(line_list), name='Ion', dtype='U5'))
+        line_list.add_column(Column([1]*len(line_list), name='NIST'))
+
     # Return
     return line_list
 
 
-def load_line_lists(lines, unknown=False, skip=False, all=False):
+def load_line_lists(lines, unknown=False, skip=False, all=False, NIST=False):
     """ Loads a series of line list files
 
     Parameters
@@ -77,6 +97,8 @@ def load_line_lists(lines, unknown=False, skip=False, all=False):
     unknown : bool, optional
     skip : bool, optional
       Skip missing line lists (mainly for building)
+    NIST : bool, optional
+      Load the full NIST linelists
 
     Returns
     -------
@@ -97,12 +119,15 @@ def load_line_lists(lines, unknown=False, skip=False, all=False):
     # Read standard files
     lists = []
     for line in lines:
-        line_file = line_path+'{:s}_lines.dat'.format(line)
+        if NIST:
+            line_file = nist_path+'{:s}_vacuum.ascii'.format(line)
+        else:
+            line_file = line_path+'{:s}_lines.dat'.format(line)
         if not os.path.isfile(line_file):
             if not skip:
                 raise IOError("Input line {:s} is not included in arclines".format(line))
         else:
-            lists.append(load_line_list(line_file))
+            lists.append(load_line_list(line_file, NIST=NIST))
     # Stack
     if len(lists) == 0:
         return None
@@ -142,6 +167,10 @@ def load_nist(ion):
     ----------
     ion : str
       Name of ion
+    Returns
+    -------
+    tbl : Table
+      Table of lines
     """
     import glob
     # Root (for development only)

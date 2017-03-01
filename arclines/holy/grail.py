@@ -219,6 +219,11 @@ def semi_brute(spec, lines, wv_cen, disp, siglev=20., min_ampl=300.,
     # Fit
     final_fit = None
     if do_fit:
+        # Read in Full NIST Tables
+        full_NIST = arcl_io.load_line_lists(lines, NIST=True)
+        # KLUDGE!!!!!
+        keep = full_NIST['wave'] > 8800.
+        line_lists = vstack([line_lists, full_NIST[keep]])
         #
         NIST_lines = line_lists['NIST'] > 0
         ifit = np.where(best_dict['mask'])[0]
