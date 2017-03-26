@@ -1,3 +1,4 @@
+# Creation Date: 2017-Mar-26
 # Creation Date: 2016-Dec-23
 # Creation Date: 2016-Dec-21
 | ion |       wave | NIST | Instr | amplitude |                    Source |
@@ -29,6 +30,9 @@
 | NeI |  7440.9469 |    1 |     9 |     37896 | lrisr_600_7500_PYPIT.json |
 | NeI |  7490.9335 |    1 |     9 |      5760 | lrisr_600_7500_PYPIT.json |
 | NeI |  7537.8488 |    1 |     9 |      5565 | lrisr_600_7500_PYPIT.json |
-| NeI |  8084.6801 |    1 |     8 |       485 | kastr_600_7500_PYPIT.json |
+| NeI |  8084.6801 |    1 |     9 |       485 | kastr_600_7500_PYPIT.json |
 | NeI |  8379.9093 |    1 |     1 |     23176 | lrisr_600_7500_PYPIT.json |
+| NeI |  8497.6932 |    1 |     1 |     21494 | lrisr_400_8500_PYPIT.json |
 | NeI |  8649.4164 |    1 |     1 |       383 | lrisr_600_7500_PYPIT.json |
+| NeI |  8656.7599 |    1 |     1 |     10656 | lrisr_400_8500_PYPIT.json |
+| NeI |  9204.2841 |    1 |     1 |      2334 | lrisr_400_8500_PYPIT.json |

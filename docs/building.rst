@@ -80,7 +80,7 @@ Inspection
 
 Run the add setup script without --write::
 
-    ./scripts/add_source
+    ./scripts/add_source.py
 
 Inspect the output to the terminal.
 
@@ -90,12 +90,21 @@ Inspect the output to the terminal.
 
 Inspect the output plot.
 
+  - Green are new lines to be added
+  - Blue were present previously
+  - Orange are new UNKNOWN lines
+  - Grey are old UNKNOWN lines
+
 Write
 +++++
 
+Write to the disk (and github)::
+
+    ./scripts/add_source --write
+
 Decide whether to include UNKNOWN lines.  This is only
 recommended when there is a large set or for a very sparse
-arc spectrum (i.e. where every line matters).
+arc spectrum (i.e. where every line matters).::
 
     ./scripts/add_source --write --no_unknowns
 

@@ -1,3 +1,4 @@
+# Creation Date: 2017-Mar-26
 # Creation Date: 2016-Dec-23
 # Creation Date: 2016-Dec-21
 | ion |       wave | NIST | Instr | amplitude |                    Source |
@@ -6,6 +7,6 @@
 | HgI |  4047.7080 |    1 |     6 |     12902 | lrisb_600_4000_PYPIT.json |
 | HgI |  4078.9880 |    1 |     6 |       884 | lrisb_600_4000_PYPIT.json |
 | HgI |  4359.5600 |    1 |     6 |     38125 | lrisb_600_4000_PYPIT.json |
-| HgI |  5462.2680 |    1 |    14 |     28377 | lrisb_600_4000_PYPIT.json |
+| HgI |  5462.2680 |    1 |    15 |     28377 | lrisb_600_4000_PYPIT.json |
 | HgI |  5771.2100 |    1 |     9 |      5510 | lrisr_600_7500_PYPIT.json |
 | HgI |  5792.2760 |    1 |     1 |      6029 | lrisr_600_7500_PYPIT.json |
