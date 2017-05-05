@@ -10,8 +10,6 @@ import pdb
 from arclines import io as arcl_io
 from arclines.holy import patterns as arch_patt
 
-#from xastropy.xutils import xdebug as xdb
-
 
 def grade_fidx_results(fidx):
     """  Grades the quad_match results
@@ -132,7 +130,7 @@ def test_quad_match_with_lowredux(low_redux_hdf, instr, swv_uncertainty=500.):
             from scipy.interpolate import interp1d
             fwv = interp1d(np.arange(npix), wave, kind='cubic')
             #fwv(all_tcent[3])
-            xdb.set_trace()
+            pdb.set_trace()
         amps = []
         for itc in all_tcent:
             pix = int(np.round(itc))
@@ -216,10 +214,10 @@ def test_quad_match_with_lowredux(low_redux_hdf, instr, swv_uncertainty=500.):
             grades['nRisk'], grades['nAmb'], grades['nFail'],
                 twv_min))
         if ispec == 94:
-            xdb.set_trace()
+            pdb.set_trace()
     extras = np.array(extras)
     extras.sort()
-    xdb.set_trace()
+    pdb.set_trace()
 
 
 def main(flg_tst):
