@@ -217,7 +217,6 @@ def test_quad_match_with_lowredux(low_redux_hdf, instr, swv_uncertainty=500.):
             pdb.set_trace()
     extras = np.array(extras)
     extras.sort()
-    pdb.set_trace()
 
 
 def main(flg_tst):

@@ -126,10 +126,10 @@ def main(flg_tst):
 # Test
 if __name__ == '__main__':
     flg_tst = 0
-    #flg_tst += 2**0   # LRISb 600
+    flg_tst += 2**0   # LRISb 600
     #flg_tst += 2**1   # Kastb
     #flg_tst += 2**2   # LRISb with unknown wv_cen
-    flg_tst += 2**3   # LRISb off to red with unknown wv_cen
+    #flg_tst += 2**3   # LRISb off to red with unknown wv_cen
     #flg_tst += 2**4   # LRISr nominal
 
     main(flg_tst)
