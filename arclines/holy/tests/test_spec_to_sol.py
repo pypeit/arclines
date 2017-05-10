@@ -123,6 +123,22 @@ def main(flg_tst):
         test_unknwn_wvcen(np.array(pypit_fit['spec']), ['ArI','HgI','KrI','NeI','XeI'],
                    7000., 1.6, plot_fil='lrisr_fit.pdf')
 
+    # Testing NIST file read using astropy
+    if flg_tst == 2**5:
+        import glob
+        from astropy.table import vstack
+
+        NIST = True
+        nist_path = arclines.__path__[0]+'/data/NIST/'
+
+        lines = ['ArI', 'CdI', 'CuI', 'HgI', 'KrI', 'NeI', 'XeI', 'ZnI']
+        lists = []
+        for line in lines:
+            line_file = nist_path+'{:s}_vacuum.ascii'.format(line)
+            if os.path.isfile(line_file):
+                lists.append(arclines.io.load_line_list(line_file, NIST=NIST))
+        line_lists = vstack(lists, join_type='exact')
+
 # Test
 if __name__ == '__main__':
     flg_tst = 0
@@ -130,6 +146,7 @@ if __name__ == '__main__':
     #flg_tst += 2**1   # Kastb
     #flg_tst += 2**2   # LRISb with unknown wv_cen
     #flg_tst += 2**3   # LRISb off to red with unknown wv_cen
-    flg_tst += 2**4   # LRISr nominal
+    #flg_tst += 2**4   # LRISr nominal
+    flg_tst += 2**5   # NIST test
 
     main(flg_tst)
