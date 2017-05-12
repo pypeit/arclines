@@ -61,8 +61,8 @@ def init_line_list():
     # Load sources to check
     sources = arcl_io.load_source_table()
     src_files = sources['File'].data
-    if src_files.dtype.itemsize > len_src:
-        raise ValueError("Sources now exceeds table.  Should fix source name")
+    if len(src_files[0]) > len_src:
+        raise ValueError("Source filename now exceeds table.  Should fix source name")
     dummy_src = str('#')*len_src
     # Arc Line name
     dummy_line = str('#')*len_line

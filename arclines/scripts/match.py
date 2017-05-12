@@ -44,6 +44,7 @@ def main(pargs=None):
     """
     import numpy as np
 
+    from linetools import utils as ltu
 
     from arclines import io as arcl_io
     from arclines.holy import utils as arch_utils
@@ -63,9 +64,13 @@ def main(pargs=None):
     lines = pargs.lines.split(',')
 
     # Call brute
-    semi_brute(spec, lines, pargs.wvcen, pargs.disp, min_ampl=min_ampl,
+    best_dict, final_fit = semi_brute(spec, lines, pargs.wvcen, pargs.disp, min_ampl=min_ampl,
                debug=pargs.debug, outroot=pargs.outroot, do_fit=pargs.fit,
                verbose=True)
     if pargs.debug:
         pdb.set_trace()
+
+    if pargs.fit:
+        ltu.savejson(pargs.outroot+'_fit.json', ltu.jsonify(final_fit), easy_to_read=True, overwrite=True)
+
 

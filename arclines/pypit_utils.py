@@ -4,7 +4,7 @@ Avoid double dependency if possible
 from __future__ import absolute_import, division, print_function
 
 import numpy as np
-
+import pdb
 
 def find_peaks(censpec, siglev=6., bpfit=5):
     """
@@ -48,7 +48,7 @@ def find_peaks(censpec, siglev=6., bpfit=5):
     sfit = 1.4826*np.abs(detns[w]-yrng[w])
     ct = np.polyfit(xfit, sfit, bpfit)
     yerr = np.polyval(ct, xrng)
-    myerr = np.median(np.sort(yerr)[:yerr.size/2])
+    myerr = np.median(np.sort(yerr)[:yerr.size//2])
     yerr[np.where(yerr < myerr)] = myerr
     # Find all significant detections
     # The last argument is the overall minimum significance level of an arc line detection and the second

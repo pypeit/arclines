@@ -69,14 +69,32 @@ def load_line_list(line_file, add_path=False, use_ion=False, NIST=False):
     line_list = Table.read(line_file, format='ascii.fixed_width', comment='#')
     #  NIST?
     if NIST:
-        line_list.remove_column('Ritz')
+        # Remove unwanted columns
+        tkeys = line_list.keys()
+        for badkey in ['Ritz','Acc.','Type','Ei','Lower','Upper','TP','Line']:
+            for tkey in tkeys:
+                if badkey in tkey:
+                    line_list.remove_column(tkey)
+        # Relative intensity -- Strip junk off the end
+        reli = []
+        for imsk, idat in zip(line_list['Rel.'].mask, line_list['Rel.'].data):
+            if imsk:
+                reli.append(0.)
+            else:
+                try:
+                    reli.append(float(idat))
+                except ValueError:
+                    try:
+                        reli.append(float(idat[:-1]))
+                    except ValueError:
+                        reli.append(0.)
         line_list.remove_column('Rel.')
-        line_list.remove_column('Aki')
-        line_list.remove_column('Acc.')
-        line_list.remove_column('Type')
+        line_list['Rel.'] = reli
+        #
         gdrows = line_list['Observed'] > 0.  # Eliminate dummy lines
         line_list = line_list[gdrows]
         line_list.rename_column('Observed','wave')
+        # Others
         # Grab ion name
         i0 = line_file.rfind('/')
         i1 = line_file.rfind('_')
