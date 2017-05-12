@@ -25,7 +25,6 @@ def test_load_line_list():
     import arclines
     llst = arcl_io.load_line_list(arclines.__path__[0]+'/data/lists/HgI_lines.dat')
 
-
 def test_load_sources():
     sources = arcl_io.load_source_table()
     # Test

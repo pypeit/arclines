@@ -12,7 +12,7 @@ from arclines.holy import grail
 #from xastropy.xutils import xdebug as xdb
 
 
-def test_basic(spec, lines, wv_cen, disp, siglev=20., min_ampl=300.,
+def tst_basic(spec, lines, wv_cen, disp, siglev=20., min_ampl=300.,
                swv_uncertainty=350., pix_tol=2, plot_fil=None):
     """ As named
     """
@@ -20,7 +20,7 @@ def test_basic(spec, lines, wv_cen, disp, siglev=20., min_ampl=300.,
                    swv_uncertainty=swv_uncertainty, pix_tol=pix_tol, plot_fil=plot_fil)
 
 
-def test_unknwn_wvcen(spec, lines, wv_cen, disp, siglev=20., min_ampl=300.,
+def tst_unknwn_wvcen(spec, lines, wv_cen, disp, siglev=20., min_ampl=300.,
                swv_uncertainty=350., pix_tol=2, plot_fil=None,
                       wvoff=1000.):
     """ As named
@@ -76,7 +76,7 @@ def main(flg_tst):
         with open(test_arc_path+src_file,'r') as f:
             pypit_fit = json.load(f)
         # Run
-        test_basic(np.array(pypit_fit['spec']), ['CdI','HgI','ZnI'],
+        tst_basic(np.array(pypit_fit['spec']), ['CdI','HgI','ZnI'],
                        4400., 1.26, plot_fil='lrisb_fit.pdf')
 
     # Test on Kastb from PYPIT
@@ -87,7 +87,7 @@ def main(flg_tst):
         with open(test_arc_path+src_file,'r') as f:
             pypit_fit = json.load(f)
         # Run
-        test_basic(np.array(pypit_fit['spec']), ['CdI','HeI','HgI'],
+        tst_basic(np.array(pypit_fit['spec']), ['CdI','HeI','HgI'],
                        4400., 1.02, plot_fil='kastb_fit.pdf')
 
     # Varying wvcen on LRISb
@@ -98,7 +98,7 @@ def main(flg_tst):
         with open(test_arc_path+src_file,'r') as f:
             pypit_fit = json.load(f)
         # Run
-        test_unknwn_wvcen(np.array(pypit_fit['spec']), ['CdI','HgI','ZnI'],
+        tst_unknwn_wvcen(np.array(pypit_fit['spec']), ['CdI','HgI','ZnI'],
                    4400., 1.26, plot_fil='lrisb_scan_fit.pdf')
 
     # Varying wvcen on LRISb, LowRedux and far off center
@@ -109,7 +109,7 @@ def main(flg_tst):
         hdf = h5py.File(hdf_file,'r')
         spec = hdf['arcs/18/spec'].value
         # Run
-        test_unknwn_wvcen(spec, ['CdI','HgI','ZnI'],
+        tst_unknwn_wvcen(spec, ['CdI','HgI','ZnI'],
                    5000., 1.26, plot_fil='lrisb_off_fit.pdf')
 
     # Varying wvcen on LRISr
@@ -120,7 +120,7 @@ def main(flg_tst):
         with open(test_arc_path+src_file,'r') as f:
             pypit_fit = json.load(f)
         # Run
-        test_unknwn_wvcen(np.array(pypit_fit['spec']), ['ArI','HgI','KrI','NeI','XeI'],
+        tst_unknwn_wvcen(np.array(pypit_fit['spec']), ['ArI','HgI','KrI','NeI','XeI'],
                    7000., 1.6, plot_fil='lrisr_fit.pdf')
 
 # Test

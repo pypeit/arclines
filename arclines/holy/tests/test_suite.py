@@ -17,7 +17,7 @@ import arclines
 test_arc_path = arclines.__path__[0]+'/data/test_arcs/'
 outdir = 'TEST_SUITE_OUTPUT/'
 
-def test_holy(name, spec_file, lines, wv_cen, disp, score, fidx):
+def tst_holy(name, spec_file, lines, wv_cen, disp, score, fidx):
 
     # Favored parameters (should match those in the defaults)
     siglev=20.
@@ -119,7 +119,7 @@ def main(flg_tst):
             names,src_files,all_lines,all_wvcen,all_disp,scores,fidxs):
         #if '900' not in name:
         #    continue
-        grade, best_dict, final_fit = test_holy(name, src_file, lines, wvcen, disp, score, fidx)
+        grade, best_dict, final_fit = tst_holy(name, src_file, lines, wvcen, disp, score, fidx)
         sv_grade.append(grade)
         #if '900' in name:
         #    pdb.set_trace()

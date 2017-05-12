@@ -70,7 +70,7 @@ def grade_fidx_results(fidx):
     return grades
 
 
-def test_quad_match_with_lowredux(low_redux_hdf, instr, swv_uncertainty=500.):
+def tst_quad_match_with_lowredux(low_redux_hdf, instr, swv_uncertainty=500.):
     """
     Returns
     -------
@@ -226,11 +226,11 @@ def main(flg_tst):
     # Test on LRISb_600
     if (flg_tst % 2**1) >= 2**0:
         hdf_file = test_arc_path+'LRISb_600_LRX.hdf5'  # Create with low_redux.py if needed
-        test_quad_match_with_lowredux(hdf_file, 'LRISb')
+        tst_quad_match_with_lowredux(hdf_file, 'LRISb')
     # Test on LRISr_600
     if (flg_tst % 2**2) >= 2**1:
         hdf_file = test_arc_path+'LRISr_600_7500.hdf5'  # Create with low_redux.py if needed
-        test_quad_match_with_lowredux(hdf_file, 'LRISr')
+        tst_quad_match_with_lowredux(hdf_file, 'LRISr')
 
 
 # Test
