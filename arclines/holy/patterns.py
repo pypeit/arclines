@@ -15,6 +15,7 @@ def match_quad_to_list(spec_lines, line_list, wv_guess, dwv_guess,
     spec_lines : ndarray
       pixel space
     line_list
+    wv_guess :
     tol
 
     Returns
@@ -151,6 +152,7 @@ def scan_for_matches(wvcen, disp, npix, cut_tcent, wvdata, best_dict=None,
         match_idx, scores = run_quad_match(cut_tcent, wave, wvdata, disp,
                                            swv_uncertainty=swv_uncertainty,
                                            pix_tol=pix_tol)
+        #pdb.set_trace()
         # Score
         mask = np.array([False]*len(cut_tcent))
         IDs = []

@@ -272,7 +272,7 @@ def load_spectrum(spec_file, index=0):
 
     Returns
     -------
-
+    spec : ndarray
     """
     import h5py
     iext = spec_file.rfind('.')
