@@ -16,6 +16,8 @@ def match_quad_to_list(spec_lines, line_list, wv_guess, dwv_guess,
       pixel space
     line_list
     tol
+    min_ftol : float, optional
+      Minimum tolerance for matching 
 
     Returns
     -------
