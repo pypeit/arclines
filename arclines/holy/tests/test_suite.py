@@ -95,6 +95,15 @@ def main(flg_tst):
     fidxs += [-1]
     scores += [dict(rms=0.08, nxfit=10, nmatch=10)]
 
+    # LRISr 400/8500 longslit -- red
+    names += ['LRISr_400_8500_longslit']
+    src_files += ['lrisr_400_8500_PYPIT.json']
+    all_wvcen += [8000.]
+    all_disp += [2.382]
+    all_lines += [['ArI','HgI','KrI','NeI','XeI']]
+    fidxs += [-1]
+    scores += [dict(rms=0.08, nxfit=10, nmatch=10)]
+
     # Kastb 600 grism
     names += ['KASTb_600_standard']
     src_files += ['kastb_600_PYPIT.json']
@@ -117,8 +126,8 @@ def main(flg_tst):
     sv_grade = [] # for the end, just in case
     for name,src_file,lines,wvcen,disp,score,fidx in zip(
             names,src_files,all_lines,all_wvcen,all_disp,scores,fidxs):
-        #if '900' not in name:
-        #    continue
+        if '8500' not in name:
+            continue
         grade, best_dict, final_fit = tst_holy(name, src_file, lines, wvcen, disp, score, fidx)
         sv_grade.append(grade)
         #if '900' in name:
@@ -138,5 +147,6 @@ if __name__ == '__main__':
     #flg_tst += 2**2   # LRISb with unknown wv_cen
     #flg_tst += 2**3   # LRISb off to red with unknown wv_cen
     #flg_tst += 2**4   # LRISr nominal
+    #flg_tst += 2**5   # LRISr 400/8500
 
     main(flg_tst)
