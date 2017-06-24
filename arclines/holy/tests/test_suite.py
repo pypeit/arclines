@@ -67,6 +67,7 @@ def main(flg_tst):
     fidxs = [0]
     scores = [dict(rms=0.13, nxfit=13, nmatch=10)]
 
+    '''
     # LRISb off-center
     # NeI lines are seen beyond the dicrhoic but are ignored
     names += ['LRISb_600_4000_red']
@@ -76,6 +77,7 @@ def main(flg_tst):
     all_lines += [['CdI','ZnI','HgI']]  #,'NeI']]
     fidxs += [18]
     scores += [dict(rms=0.08, nxfit=10, nmatch=10)]
+    '''
 
     # LRISr 600/7500 longslit
     names += ['LRISr_600_7500_longslit']
@@ -86,6 +88,7 @@ def main(flg_tst):
     fidxs += [-1]
     scores += [dict(rms=0.08, nxfit=30, nmatch=50)]
 
+    '''
     # LRISr 900/XX00 longslit -- blue
     names += ['LRISr_900_XX00_longslit']
     src_files += ['lrisr_900_XX00_PYPIT.json']
@@ -94,6 +97,7 @@ def main(flg_tst):
     all_lines += [['ArI','HgI','KrI','NeI','XeI','CdI','ZnI']]
     fidxs += [-1]
     scores += [dict(rms=0.08, nxfit=10, nmatch=10)]
+    '''
 
     # LRISr 400/8500 longslit -- red
     names += ['LRISr_400_8500_longslit']
@@ -102,7 +106,7 @@ def main(flg_tst):
     all_disp += [2.382]
     all_lines += [['ArI','HgI','KrI','NeI','XeI']]
     fidxs += [-1]
-    scores += [dict(rms=0.08, nxfit=10, nmatch=10)]
+    scores += [dict(rms=0.12, nxfit=40, nmatch=40)]
 
     # Kastb 600 grism
     names += ['KASTb_600_standard']
@@ -126,8 +130,8 @@ def main(flg_tst):
     sv_grade = [] # for the end, just in case
     for name,src_file,lines,wvcen,disp,score,fidx in zip(
             names,src_files,all_lines,all_wvcen,all_disp,scores,fidxs):
-        if '8500' not in name:
-            continue
+        #if '8500' not in name:
+        #    continue
         grade, best_dict, final_fit = tst_holy(name, src_file, lines, wvcen, disp, score, fidx)
         sv_grade.append(grade)
         #if '900' in name:

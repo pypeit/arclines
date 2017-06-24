@@ -122,8 +122,9 @@ def scan_for_matches(wvcen, disp, npix, cut_tcent, wvdata, best_dict=None,
     """
     Parameters
     ----------
-    wvcen
-    disp
+    wvcen : float
+      Guess at central wavelength
+    disp : float
     npix
     cut_tcent
     wvdata

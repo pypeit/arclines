@@ -125,7 +125,7 @@ def iterative_fitting(spec, tcent, ifit, IDs, llist, disp, plot_fil=None,
         shift=0., tcent=tcent, rms=rms_pix)
     # QA
     if plot_fil is not None:
-        arqa.arc_fit_qa(None, final_fit, outfil=plot_fil)
+        arqa.arc_fit_qa(None, final_fit, outfile=plot_fil)
     # Return
     return final_fit
 
