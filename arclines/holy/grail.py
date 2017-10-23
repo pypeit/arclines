@@ -170,9 +170,30 @@ def semi_brute(spec, lines, wv_cen, disp, siglev=20., min_ampl=300.,
 
         # Save linelist?
         if best_dict['nmatch'] > sav_nmatch:
-            best_dict['line_list'] = tot_list
+            best_dict['line_list'] = tot_list.copy()
             best_dict['unknown'] = unknown
             best_dict['ampl'] = unknown
+
+    # Try to pick up some extras by turning off/on unknowns
+    if best_dict['unknown']:
+        tot_list = line_lists
+    else:
+        tot_list = vstack([line_lists,unknwns])
+    wvdata = np.array(tot_list['wave'].data) # Removes mask if any
+    wvdata.sort()
+    tmp_dict = best_dict.copy()
+    tmp_dict['nmatch'] = 0
+    arch_patt.scan_for_matches(best_dict['bwv'], disp, npix, cut_tcent, wvdata,
+                               best_dict=tmp_dict, pix_tol=best_dict['pix_tol'],
+                               ampl=best_dict['ampl'], wvoff=1.)
+    for kk,ID in enumerate(tmp_dict['IDs']):
+        if (ID > 0.) and (best_dict['IDs'][kk] == 0.):
+            best_dict['IDs'][kk] = ID
+            best_dict['scores'][kk] = tmp_dict['scores'][kk]
+            best_dict['mask'][kk] = True
+            best_dict['midx'][kk] = tmp_dict['midx'][kk]
+            best_dict['nmatch'] += 1
+    #pdb.set_trace()
 
     if best_dict['nmatch'] == 0:
         print('---------------------------------------------------')
@@ -212,18 +233,22 @@ def semi_brute(spec, lines, wv_cen, disp, siglev=20., min_ampl=300.,
 
     # Plot
     if outroot is not None:
-        arcl_plots.match_qa(spec, cut_tcent, best_dict['line_list'],
+        tmp_list = vstack([line_lists,unknwns])
+        arcl_plots.match_qa(spec, cut_tcent, tmp_list,
                             best_dict['IDs'], best_dict['scores'], outroot+'.pdf')
         print("Wrote: {:s}".format(outroot+'.pdf'))
 
     # Fit
     final_fit = None
     if do_fit:
+        '''
         # Read in Full NIST Tables
         full_NIST = arcl_io.load_line_lists(lines, NIST=True)
         # KLUDGE!!!!!
         keep = full_NIST['wave'] > 8800.
+        pdb.set_trace()
         line_lists = vstack([line_lists, full_NIST[keep]])
+        '''
         #
         NIST_lines = line_lists['NIST'] > 0
         ifit = np.where(best_dict['mask'])[0]

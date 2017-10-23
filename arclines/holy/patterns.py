@@ -16,6 +16,8 @@ def match_quad_to_list(spec_lines, line_list, wv_guess, dwv_guess,
       pixel space
     line_list
     tol
+    min_ftol : float, optional
+      Minimum tolerance for matching 
 
     Returns
     -------
@@ -120,8 +122,9 @@ def scan_for_matches(wvcen, disp, npix, cut_tcent, wvdata, best_dict=None,
     """
     Parameters
     ----------
-    wvcen
-    disp
+    wvcen : float
+      Guess at central wavelength
+    disp : float
     npix
     cut_tcent
     wvdata
