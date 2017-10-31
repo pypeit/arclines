@@ -231,6 +231,8 @@ def test_triangles_with_lowredux(low_redux_hdf, instr, swv_uncertainty=500.):
     -------
 
     """
+    import cypatterns
+
     # Load for instrument
     if instr == 'LRISb':
         llist = arcl_io.load_line_lists(['CdI','HgI','ZnI'], unknown=True)
@@ -255,6 +257,8 @@ def test_triangles_with_lowredux(low_redux_hdf, instr, swv_uncertainty=500.):
     for ispec in range(mdict['nspec']):
         detlines = hdf['arcs/'+str(ispec)+'/pixpk'].value
         nlin = detlines.size
+
+        null = cypatterns.triangles(detlines, linelist, 5)
 
         spec = hdf['arcs/'+str(ispec)+'/spec'].value
         wave = hdf['arcs/'+str(ispec)+'/wave'].value  # vacuum
