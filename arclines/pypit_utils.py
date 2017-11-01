@@ -4,7 +4,7 @@ Avoid double dependency if possible
 from __future__ import absolute_import, division, print_function
 
 import numpy as np
-import pdb
+
 
 def find_peaks(censpec, siglev=6., bpfit=5):
     """
@@ -37,7 +37,7 @@ def find_peaks(censpec, siglev=6., bpfit=5):
         ct = np.polyfit(xfit, yfit, bpfit)
         yrng = np.polyval(ct, xrng)
         sigmed = 1.4826*np.median(np.abs(detns[w]-yrng[w]))
-        w = np.where(detns > yrng+1.0*sigmed)
+        w = np.where(detns > yrng + siglev*sigmed)
         mask[w] = 1
         if mskcnt == np.sum(mask):
             break  # No new values have been included in the mask
