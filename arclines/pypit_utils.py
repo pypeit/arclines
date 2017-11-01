@@ -6,7 +6,7 @@ from __future__ import absolute_import, division, print_function
 import numpy as np
 
 
-def find_peaks(censpec, siglev=6., bpfit=5):
+def find_peaks(censpec, siglev=1.0, bpfit=5):
     """
     Parameters
     ----------
