@@ -4,9 +4,9 @@ Avoid double dependency if possible
 from __future__ import absolute_import, division, print_function
 
 import numpy as np
-import pdb
 
-def find_peaks(censpec, siglev=6., bpfit=5):
+
+def find_peaks(censpec, siglev=1.0, bpfit=5):
     """
     Parameters
     ----------
@@ -27,7 +27,8 @@ def find_peaks(censpec, siglev=6., bpfit=5):
     xrng = np.arange(float(detns.size))
     yrng = np.zeros(detns.size)
     mask = np.zeros(detns.size, dtype=np.int)
-    mskcnt = 0
+    mask[np.where(detns < 0.0)] = 1.0
+    mskcnt = np.sum(mask)
     # Continuum
     while True:
         w = np.where(mask == 0)
@@ -36,7 +37,7 @@ def find_peaks(censpec, siglev=6., bpfit=5):
         ct = np.polyfit(xfit, yfit, bpfit)
         yrng = np.polyval(ct, xrng)
         sigmed = 1.4826*np.median(np.abs(detns[w]-yrng[w]))
-        w = np.where(detns > yrng+1.5*sigmed)
+        w = np.where(detns > yrng + siglev*sigmed)
         mask[w] = 1
         if mskcnt == np.sum(mask):
             break  # No new values have been included in the mask
@@ -53,10 +54,10 @@ def find_peaks(censpec, siglev=6., bpfit=5):
     # Find all significant detections
     # The last argument is the overall minimum significance level of an arc line detection and the second
     # last argument is the level required by an individual pixel before the neighbourhood of this pixel is searched.
-    satsnd = np.zeros_like(censpec)
-    tpixt, num = arcyarc.detections_sigma(yprep, yerr, np.zeros(satsnd.shape[0], dtype=np.int), siglev/2.0, siglev)
-    pixt = arcyarc.remove_similar(tpixt, num)
-    pixt = pixt[np.where(pixt != -1)].astype(np.int)
+    pixt = np.where((yprep/yerr > 0.0) &
+                    (yprep > np.roll(yprep, 1)) & (yprep >= np.roll(yprep, -1)) &
+                    (np.roll(yprep, 1) > np.roll(yprep, 2)) & (np.roll(yprep, -1) > np.roll(yprep, -2)) &
+                    (np.roll(yprep, 2) > np.roll(yprep, 3)) & (np.roll(yprep, -2) > np.roll(yprep, -3)))[0]
     tampl, tcent, twid, ngood = arcyarc.fit_arcorder(xrng, yprep, pixt, fitp)
     w = np.where((np.isnan(twid) == False) & (twid > 0.0) & (twid < 10.0/2.35) & (tcent > 0.0) & (tcent < xrng[-1]))
     # Return
