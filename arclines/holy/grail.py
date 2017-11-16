@@ -321,7 +321,7 @@ def general(spec, lines, siglev=20., min_ampl=300.,
     npix = spec.size
 
     # Lines
-    all_tcent, cut_tcent, icut = arch_utils.arc_lines_from_spec(spec, min_ampl=min_ampl)
+    all_tcent, cut_tcent, icut = arch_utils.arc_lines_from_spec(spec, siglev=1.0, min_ampl=min_ampl)
     use_tcent = all_tcent.copy()
 
     # Best
@@ -329,6 +329,7 @@ def general(spec, lines, siglev=20., min_ampl=300.,
 
     ngrid = 1000
 
+    import pdb
     # Loop on unknowns
     for unknown in [False, True]:
         if unknown:
@@ -343,6 +344,7 @@ def general(spec, lines, siglev=20., min_ampl=300.,
         # Loop on pix_tol
         for pix_tol in [1., 2.]:
             # Triangle pattern matching
+            pdb.set_trace()
             dindex, lindex, wvcen, disps = cypatterns.triangles(use_tcent, wvdata, 5, 10, npix, pix_tol)
             # dindex, lindex, wvcen, disps = arch_patt.triangles(all_tcent, wvdata, 5, 10, npixels, pix_tol)
 
