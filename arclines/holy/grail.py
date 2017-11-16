@@ -329,7 +329,6 @@ def general(spec, lines, siglev=20., min_ampl=300.,
 
     ngrid = 1000
 
-    import pdb
     # Loop on unknowns
     for unknown in [False, True]:
         if unknown:
@@ -344,7 +343,6 @@ def general(spec, lines, siglev=20., min_ampl=300.,
         # Loop on pix_tol
         for pix_tol in [1., 2.]:
             # Triangle pattern matching
-            pdb.set_trace()
             dindex, lindex, wvcen, disps = cypatterns.triangles(use_tcent, wvdata, 5, 10, npix, pix_tol)
             # dindex, lindex, wvcen, disps = arch_patt.triangles(all_tcent, wvdata, 5, 10, npixels, pix_tol)
 
