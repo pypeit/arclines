@@ -60,7 +60,7 @@ setup_keywords['provides'] = [setup_keywords['name']]
 setup_keywords['requires'] = ['Python (>2.7.0)']
 # setup_keywords['install_requires'] = ['Python (>2.7.0)']
 setup_keywords['zip_safe'] = False
-setup_keywords['use_2to3'] = True
+#setup_keywords['use_2to3'] = False
 setup_keywords['packages'] = ['arclines'] #find_packages('pypit')
 #setup_keywords['package_dir'] = {'':''}
 #setup_keywords['cmdclass'] = {'version': DesiVersion, 'test': DesiTest, 'sdist': DistutilsSdist}
@@ -70,10 +70,11 @@ setup_keywords['tests_require']=['pytest']
 
 # Cython
 import numpy, os
-from Cython.Distutils import build_ext
-from Cython.Build import cythonize
+#from Cython.Distutils import build_ext
+#from Cython.Build import cythonize
 from distutils.extension import Extension
 
+'''
 include_gsl_dir = os.getenv('GSL_PATH')+'/include/'
 lib_gsl_dir = os.getenv('GSL_PATH')+'/lib/'
 pyx_files = glob.glob('arclines/holy/*.pyx')
@@ -95,8 +96,10 @@ for pyx_file in pyx_files:
 #    pyx_split = pyx_file.split('/')
 #    ext = cythonize(pyx_split[1])
 #    setup_keywords['ext_modules'].append(ext)
+'''
 
-setup_keywords['cmdclass']={'build_ext': build_ext}
+#setup_keywords['cmdclass']={'build_ext': build_ext}
+
 
 # Autogenerate command-line scripts.
 #

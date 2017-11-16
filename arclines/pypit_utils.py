@@ -6,7 +6,7 @@ from __future__ import absolute_import, division, print_function
 import numpy as np
 
 
-def find_peaks(censpec, siglev=6., bpfit=5):
+def find_peaks(censpec, siglev=1.0, bpfit=5):
     """
     Parameters
     ----------
@@ -37,7 +37,7 @@ def find_peaks(censpec, siglev=6., bpfit=5):
         ct = np.polyfit(xfit, yfit, bpfit)
         yrng = np.polyval(ct, xrng)
         sigmed = 1.4826*np.median(np.abs(detns[w]-yrng[w]))
-        w = np.where(detns > yrng+1.0*sigmed)
+        w = np.where(detns > yrng + siglev*sigmed)
         mask[w] = 1
         if mskcnt == np.sum(mask):
             break  # No new values have been included in the mask
@@ -49,7 +49,7 @@ def find_peaks(censpec, siglev=6., bpfit=5):
     sfit = 1.4826*np.abs(detns[w]-yrng[w])
     ct = np.polyfit(xfit, sfit, bpfit)
     yerr = np.polyval(ct, xrng)
-    myerr = np.median(np.sort(yerr)[:yerr.size/2])
+    myerr = np.median(np.sort(yerr)[:yerr.size//2])
     yerr[np.where(yerr < myerr)] = myerr
     # Find all significant detections
     # The last argument is the overall minimum significance level of an arc line detection and the second

@@ -5,32 +5,108 @@ from __future__ import (print_function, absolute_import, division, unicode_liter
 import numpy as np
 import os
 import datetime
+import pdb
 
 from astropy.table import Table, Column, vstack
+from astropy.io import fits
+
+from linetools import utils as ltu
 
 import arclines # For path
 from arclines import defs
+line_path = arclines.__path__[0]+'/data/lists/'
+nist_path = arclines.__path__[0]+'/data/NIST/'
 
 
-def load_line_list(line_file, add_path=False):
+def load_by_hand():
+    """ By-hand line list
+    Parameters
+    ----------
+    line_file
+    add_path
+
+    Returns
+    -------
+    byhand : Table
+
+    """
+    str_len_dict = defs.str_len()
+
+    src_file = arclines.__path__[0]+'/data/sources/by_hand_list.ascii'
+    # Read
+    line_list = Table.read(src_file, format='ascii.fixed_width', comment='#')
+    # Add
+    line_list['NIST'] = 1
+    # Deal with Instr and Source
+    ilist, slist = [], []
+    for row in line_list:
+        ilist.append(defs.instruments()[row['sInstr']])  # May need to split
+        slist.append(row['sSource'])
+    line_list['Instr'] = ilist
+    line_list['Source'] = np.array(slist, dtype='S{:d}'.format(str_len_dict['Source']))
+    # Trim
+    return line_list[['ion', 'wave', 'NIST', 'Instr', 'amplitude', 'Source']]
+
+
+def load_line_list(line_file, add_path=False, use_ion=False, NIST=False):
     """
     Parameters
     ----------
     line_file : str
+      Full path to line_list or name of ion
     add_path : bool, optional
       Not yet implemented
+    NIST : bool, optional
+      NIST formatted table?
 
     Returns
     -------
     line_list : Table
 
     """
+    if use_ion:
+        line_file = line_path+'{:s}_lines.dat'.format(line_file)
     line_list = Table.read(line_file, format='ascii.fixed_width', comment='#')
+    #  NIST?
+    if NIST:
+        # Remove unwanted columns
+        tkeys = line_list.keys()
+        for badkey in ['Ritz','Acc.','Type','Ei','Lower','Upper','TP','Line']:
+            for tkey in tkeys:
+                if badkey in tkey:
+                    line_list.remove_column(tkey)
+        # Relative intensity -- Strip junk off the end
+        reli = []
+        for imsk, idat in zip(line_list['Rel.'].mask, line_list['Rel.'].data):
+            if imsk:
+                reli.append(0.)
+            else:
+                try:
+                    reli.append(float(idat))
+                except ValueError:
+                    try:
+                        reli.append(float(idat[:-1]))
+                    except ValueError:
+                        reli.append(0.)
+        line_list.remove_column('Rel.')
+        line_list['Rel.'] = reli
+        #
+        gdrows = line_list['Observed'] > 0.  # Eliminate dummy lines
+        line_list = line_list[gdrows]
+        line_list.rename_column('Observed','wave')
+        # Others
+        # Grab ion name
+        i0 = line_file.rfind('/')
+        i1 = line_file.rfind('_')
+        ion = line_file[i0+1:i1]
+        line_list.add_column(Column([ion]*len(line_list), name='Ion', dtype='U5'))
+        line_list.add_column(Column([1]*len(line_list), name='NIST'))
+
     # Return
     return line_list
 
 
-def load_line_lists(lines, unknown=False, skip=False):
+def load_line_lists(lines, unknown=False, skip=False, all=False, NIST=False):
     """ Loads a series of line list files
 
     Parameters
@@ -39,24 +115,37 @@ def load_line_lists(lines, unknown=False, skip=False):
     unknown : bool, optional
     skip : bool, optional
       Skip missing line lists (mainly for building)
+    NIST : bool, optional
+      Load the full NIST linelists
 
     Returns
     -------
     line_list : Table
 
     """
-    import arclines # For path
-    line_path = arclines.__path__[0]+'/data/lists/'
+    import glob
+
+    # All?
+    if all:
+        line_files = glob.glob(line_path+'*_lines.dat')
+        lines = []
+        for line_file in line_files:
+            i0 = line_file.rfind('/')
+            i1 = line_file.rfind('_')
+            lines.append(line_file[i0+1:i1])
 
     # Read standard files
     lists = []
     for line in lines:
-        line_file = line_path+'{:s}_lines.dat'.format(line)
+        if NIST:
+            line_file = nist_path+'{:s}_vacuum.ascii'.format(line)
+        else:
+            line_file = line_path+'{:s}_lines.dat'.format(line)
         if not os.path.isfile(line_file):
             if not skip:
                 raise IOError("Input line {:s} is not included in arclines".format(line))
         else:
-            lists.append(load_line_list(line_file))
+            lists.append(load_line_list(line_file, NIST=NIST))
     # Stack
     if len(lists) == 0:
         return None
@@ -96,6 +185,10 @@ def load_nist(ion):
     ----------
     ion : str
       Name of ion
+    Returns
+    -------
+    tbl : Table
+      Table of lines
     """
     import glob
     # Root (for development only)
@@ -135,12 +228,15 @@ def load_nist(ion):
     return nist_tbl
 
 
-def load_unknown_list(lines, unknwn_file=None):
+def load_unknown_list(lines, unknwn_file=None, all=False):
     """
     Parameters
     ----------
     lines : list
+      Restricted lines;  use all=True for all
     unknwn_file : str, optional
+    all : bool, optional
+
 
     Returns
     -------
@@ -151,17 +247,56 @@ def load_unknown_list(lines, unknwn_file=None):
     # Load
     line_path = arclines.__path__[0]+'/data/lists/'
     if unknwn_file is None:
-        unknwn_file = line_path+'UNKNWN_lines.dat'
-    # Cut on input lamps
+        unknwn_file = line_path+'UNKNWNs.dat'
     line_list = load_line_list(unknwn_file)
-    msk = np.array([False]*len(line_list))
-    for line in lines:
-        line_flag = line_dict[line]
-        match = line_list['line_flag'] % (2*line_flag) >= line_flag
-        msk[match] = True
-    # Finish
-    return line_list[msk]
+    # Cut on input lamps?
+    if all:
+        return line_list
+    else:
+        msk = np.array([False]*len(line_list))
+        for line in lines:
+            line_flag = line_dict[line]
+            match = line_list['line_flag'] % (2*line_flag) >= line_flag
+            msk[match] = True
+        # Finish
+        return line_list[msk]
 
+def load_spectrum(spec_file, index=0):
+    """ Load a simple spectrum from input file
+
+    Parameters
+    ----------
+    spec_file : str
+      .fits --  Assumes simple ndarray in 0 extension
+      .ascii -- Assumes Table.read(format='ascii') will work with single column
+
+    Returns
+    -------
+
+    """
+    import h5py
+    iext = spec_file.rfind('.')
+    if 'ascii' in spec_file[iext:]:
+        tbl = Table.read(spec_file, format='ascii')
+        key = tbl.keys()[0]
+        spec = tbl[key].data
+    elif 'fits' in spec_file[iext:]:
+        spec = fits.open(spec_file)[0].data
+    elif 'hdf5' in spec_file[iext:]:
+        hdf = h5py.File(spec_file, 'r')
+        if 'arcs' in hdf.keys():
+            print("Taking arc={:d} in this file".format(index))
+            spec = hdf['arcs/'+str(index)+'/spec'].value
+        else:
+            raise IOError("Not ready for this hdf5 file")
+    elif 'json' in spec_file[iext:]:
+        jdict = ltu.loadjson(spec_file)
+        try:
+            spec = np.array(jdict['spec'])
+        except KeyError:
+            raise IOError("spec not in your JSON dict")
+    # Return
+    return spec
 
 def write_line_list(tbl, outfile):
     """

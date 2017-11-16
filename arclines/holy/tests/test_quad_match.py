@@ -10,11 +10,6 @@ import pdb
 from arclines import io as arcl_io
 from arclines.holy import patterns as arch_patt
 
-try:
-    from xastropy.xutils import xdebug as xdb
-except ImportError:
-    import pdb as debugger
-
 
 def grade_fidx_results(fidx):
     """  Grades the quad_match results
@@ -75,7 +70,7 @@ def grade_fidx_results(fidx):
     return grades
 
 
-def test_quad_match_with_lowredux(low_redux_hdf, instr, swv_uncertainty=500.):
+def tst_quad_match_with_lowredux(low_redux_hdf, instr, swv_uncertainty=500.):
     """
     Returns
     -------
@@ -135,7 +130,7 @@ def test_quad_match_with_lowredux(low_redux_hdf, instr, swv_uncertainty=500.):
             from scipy.interpolate import interp1d
             fwv = interp1d(np.arange(npix), wave, kind='cubic')
             #fwv(all_tcent[3])
-            debugger.set_trace()
+            pdb.set_trace()
         amps = []
         for itc in all_tcent:
             pix = int(np.round(itc))
@@ -219,119 +214,23 @@ def test_quad_match_with_lowredux(low_redux_hdf, instr, swv_uncertainty=500.):
             grades['nRisk'], grades['nAmb'], grades['nFail'],
                 twv_min))
         if ispec == 94:
-            debugger.set_trace()
+            pdb.set_trace()
     extras = np.array(extras)
     extras.sort()
-    debugger.set_trace()
 
 
-def test_triangles_with_lowredux(low_redux_hdf, instr, swv_uncertainty=500.):
-    """
-    Returns
-    -------
-
-    """
-    import cypatterns
-
-    # Load for instrument
-    if instr == 'LRISb':
-        llist = arcl_io.load_line_lists(['CdI','HgI','ZnI'], unknown=True)
-        linelist = llist['wave'].data
-    elif instr == 'LRISr':
-        #llist = arcl_io.load_line_lists(['ArI','HgI','KrI','NeI','XeI'], unknown=True)
-        llist = arcl_io.load_line_lists(['ArI','HgI','NeI'], unknown=True)  # No Kr or Xe in LowRedux
-        linelist = llist['wave'].data
-    else:
-        raise IOError("Not ready for this instrument")
-    # Sort
-    linelist.sort()
-
-    # Open
-    hdf = h5py.File(low_redux_hdf, 'r')
-    mdict = {}
-    for key in hdf['meta'].keys():
-        mdict[key] = hdf['meta'][key].value
-
-    # Loop on spec
-    extras = []
-    for ispec in range(mdict['nspec']):
-        detlines = hdf['arcs/'+str(ispec)+'/pixpk'].value
-        nlin = detlines.size
-
-        null = cypatterns.triangles(detlines, linelist, 5)
-
-        spec = hdf['arcs/'+str(ispec)+'/spec'].value
-        wave = hdf['arcs/'+str(ispec)+'/wave'].value  # vacuum
-
-        # init with Truth
-        final_idx = {}
-        for ii in range(nlin):
-            final_idx[ii] = {}
-            final_idx[ii]['matches'] = []
-            # Truth (if any)
-            widx = int(np.round(detlines[ii]))
-            mtw = np.where(np.abs(linelist-wave[widx]) < 2*disp)[0]  # Catches bad LRISb line
-            if len(mtw) == 0:
-                if (instr == 'LRISb') & (wave[widx] < 5600): # LRISb only
-                    extras.append(wave[widx])
-                #    print("No match for index={:d}, wave={:g}, amp={:g}".format( ii,wave[widx],spec[widx]))
-                final_idx[ii]['truth'] = -1
-            elif len(mtw) == 1:
-                final_idx[ii]['truth'] = mtw[0]
-            else:
-                if instr == 'LRISb':
-                    final_idx[ii]['truth'] = mtw[0] # Might have had this wrong! Not 4681.45
-                else:
-                    pdb.set_trace()
-        #
-        for idx in range(nlin-4):
-            for jj in range(4):
-                sub_idx = idx + np.arange(5).astype(int)
-                msk = np.array([True]*5)
-                msk[jj+1] = False
-                # Setup
-                sidx = sub_idx[msk]
-                spec_lines = np.array(detlines)[sidx]
-                #
-                widx = int(np.round(detlines[idx]))
-                wvmnx = [wave[widx]-swv_uncertainty, wave[widx]+swv_uncertainty]
-                if idx == 0:
-                    twv_min = wave[widx]
-                # Run
-                matches = arch_patt.match_quad_to_list(spec_lines, linelist, wvmnx, disp, tol=pix_tol)
-                # Save
-                for match in matches:
-                    for ii in range(4):
-                        final_idx[sidx[ii]]['matches'].append(match[ii])
-
-        # Grade
-        grades = grade_fidx_results(final_idx)
-        # PRINT
-        if ispec == 0:
-            print("II nDet nPerf nGood nOK nRisk nAmb nFail wvmin")
-        print("{:2d} {:3d}  {:3d}  {:3d}   {:3d}   {:3d}  {:3d}  {:3d}   {:g}".format(
-            ispec, grades['ndetect'], grades['nPerf'], grades['nGood'], grades['nOK'],
-            grades['nRisk'], grades['nAmb'], grades['nFail'],
-                twv_min))
-        if ispec == 94:
-            debugger.set_trace()
-    extras = np.array(extras)
-    extras.sort()
-    debugger.set_trace()
-
-
-def main(flg_tst, algorithm):
+def main(flg_tst):
     import arclines
     test_arc_path = arclines.__path__[0]+'/data/test_arcs/'
 
     # Test on LRISb_600
     if (flg_tst % 2**1) >= 2**0:
         hdf_file = test_arc_path+'LRISb_600_LRX.hdf5'  # Create with low_redux.py if needed
-        algorithm(hdf_file, 'LRISb')
+        tst_quad_match_with_lowredux(hdf_file, 'LRISb')
     # Test on LRISr_600
     if (flg_tst % 2**2) >= 2**1:
         hdf_file = test_arc_path+'LRISr_600_7500.hdf5'  # Create with low_redux.py if needed
-        algorithm(hdf_file, 'LRISr')
+        tst_quad_match_with_lowredux(hdf_file, 'LRISr')
 
 
 # Test
@@ -340,7 +239,4 @@ if __name__ == '__main__':
     flg_tst += 2**0   # LRISb 600
     #flg_tst += 2**1   # LRISr 600
 
-    #algorithm = test_quad_match_with_lowredux
-    algorithm = test_triangles_with_lowredux
-
-    main(flg_tst, algorithm)
+    main(flg_tst)

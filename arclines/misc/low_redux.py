@@ -14,6 +14,11 @@ from astropy import units as u
 import arclines
 out_path = arclines.__path__[0]+'/data/test_arcs/'
 
+try:
+    basestring
+except NameError:  # For Python 3
+    basestring = str
+
 
 def fcheby(xnrm,order):
     leg = np.zeros((len(xnrm),order))
@@ -26,6 +31,7 @@ def fcheby(xnrm,order):
     # Return
     return leg
 
+
 def cheby_val(coeff, x, nrm, order):
     #
     xnrm = 2. * (x - nrm[0])/nrm[1]
@@ -33,6 +39,18 @@ def cheby_val(coeff, x, nrm, order):
     leg = fcheby(xnrm, order)
     # Dot
     return np.dot(leg, coeff)
+
+
+def poly_val(coeff, x, nrm):
+    #
+    xnrm = 2. * (x - nrm[0])/nrm[1]
+    #
+    n = len(coeff)-1
+    y = coeff[n]
+    #for i=n-1,0,-1 do y = TEMPORARY(y) * x + c[i]
+    for ii in range(n-1,-1,-1):
+        y = y*xnrm + coeff[ii]
+    return y
 
 
 def generate_hdf(sav_file, instr, lamps, outfil, dtoler=0.6):
@@ -69,10 +87,19 @@ def generate_hdf(sav_file, instr, lamps, outfil, dtoler=0.6):
     # Line list
     alist = load_line_lists(lamps)
 
+    # One spectrum?
+    ashape = s['archive_arc'].shape
+    if len(ashape) == 1:
+        nspec = 1
+        npix = ashape[0]
+    else:
+        nspec = s['archive_arc'].shape[0]
+        npix = ashape[1]
+
     # Meta data
-    mdict = dict(npix=len(s['archive_arc'][0]), instr=instr,
+    mdict = dict(npix=npix, instr=instr,
                  lamps=[str(ilamp) for ilamp in lamps],  # For writing to hdf5
-                 nspec=len(s['archive_arc']), infil=sav_file, IDairvac='vac')
+                 nspec=nspec, infil=sav_file, IDairvac='vac')
     print("Processing {:d} spectra in {:s}".format(mdict['nspec'], sav_file))
 
     # Start output
@@ -82,16 +109,31 @@ def generate_hdf(sav_file, instr, lamps, outfil, dtoler=0.6):
     # Loop on spectra
     for ss in range(mdict['nspec']):
         sss = str(ss)
-        # Spec
-        spec = s['archive_arc'][ss]
+        # Parse
+        if nspec == 1:
+            spec = s['archive_arc']
+        else:
+            spec = s['archive_arc'][ss]
+        calib = s['calib'][ss]
         # Peaks
         tampl, tcent, twid, w, yprep = find_peaks(spec)
         pixpk = tcent[w]
         pixampl = tampl[w]
 
         # Wavelength solution
-        wv_air = cheby_val(s['calib'][ss]['ffit'], np.arange(mdict['npix']),
-                   s['calib'][ss]['nrm'],s['calib'][ss]['nord'])
+        try:
+            cfunc = calib['func'].decode('UTF-8')
+        except:
+            cfunc = calib['func']
+        if cfunc == 'CHEBY':
+            wv_air = cheby_val(calib['ffit'], np.arange(mdict['npix']),
+                       calib['nrm'], calib['nord'])
+        elif cfunc == 'POLY':
+            wv_air = poly_val(calib['ffit'], np.arange(mdict['npix']),
+                               calib['nrm'])
+        else:
+            pdb.set_trace()
+            raise ValueError("Bad calib")
         # Check blue->red or vice-versa
         if ss == 0:
             if wv_air[0] > wv_air[-1]:
@@ -100,11 +142,17 @@ def generate_hdf(sav_file, instr, lamps, outfil, dtoler=0.6):
                 mdict['bluered'] = True
 
         # Peak waves
-        twave_air = cheby_val(s['calib'][ss]['ffit'], pixpk,
-                              s['calib'][ss]['nrm'],s['calib'][ss]['nord'])
+        if calib['func'] == 'CHEBY':
+            twave_air = cheby_val(calib['ffit'], pixpk,
+                              calib['nrm'], calib['nord'])
+        else:
+            twave_air = poly_val(calib['ffit'], pixpk, calib['nrm'])
         # Air to Vac
         twave_vac = arwave.airtovac(twave_air*u.AA)
         wave_vac = arwave.airtovac(wv_air*u.AA)
+        if ss == 0:
+            disp = np.median(np.abs(wave_vac-np.roll(wave_vac,1)))
+            print("Average dispersion = {:g}".format(disp))
         # IDs
         idwv = np.zeros_like(pixpk)
         idsion = np.array([str('12345')]*len(pixpk))
@@ -136,7 +184,7 @@ def generate_hdf(sav_file, instr, lamps, outfil, dtoler=0.6):
         outh5['arcs'][sss]['pixpk'] = pixpk
         outh5['arcs'][sss]['ID'] = idwv
         outh5['arcs'][sss]['ID'].attrs['airvac'] = 'vac'
-        outh5['arcs'][sss]['Ion'] = idsion
+        outh5['arcs'][sss]['Ion'] = str(idsion)
         # LR wavelengths
         outh5['arcs'][sss]['LR_wave'] = wv_air
         outh5['arcs'][sss]['LR_wave'].attrs['airvac'] = 'air'
@@ -151,7 +199,17 @@ def generate_hdf(sav_file, instr, lamps, outfil, dtoler=0.6):
         try:
             outh5['meta'][key] = mdict[key]
         except TypeError:  # Probably a unicode thing
-            pdb.set_trace()
+            if isinstance(mdict[key], list):
+                if isinstance(mdict[key][0], basestring):
+                    tmp = [bytes(item, 'utf-8') for item in mdict[key]]
+                else:
+                    tmp = mdict[key]
+            elif isinstance(mdict[key], basestring):
+                tmp = str(mdict[key])
+            try:
+                outh5['meta'][key] = tmp
+            except TypeError:
+                pdb.set_trace()
     # Close
     outh5.close()
     print('Wrote {:s}'.format(out_path+outfil))
@@ -168,15 +226,28 @@ def main(flg_tst):
     # LRISr 600
     if (flg_tst % 2**2) >= 2**1:
         generate_hdf('lris_red_600_7500.sav', 'LRISr_600', ['ArI', 'HgI', 'KrI', 'NeI', 'XeI'], 'LRISr_600_7500.hdf5')
+
     # Kastb 600
     if (flg_tst % 2**3) >= 2**2:
         generate_hdf('kast_600_4310.sav', 'Kastb_600', ['ArI', 'HgI', 'KrI', 'NeI', 'XeI'], 'LRISr_600_7500.hdf5')
+
+    # MMT RCS
+    if (flg_tst % 2**4) >= 2**3:
+        generate_hdf('mmt_rcs_600_6310.sav', 'MMT_RCS', ['ArI', 'NeI'], 'MMT_RCS_600_6310.hdf5')
+
+    # MODS
+    if (flg_tst % 2**5) >= 2**4:
+        generate_hdf('mods_blue_400ms.sav', 'MODSb', ['XeI', 'KrI'], 'MODS_blue_400.hdf5')
+        generate_hdf('mods_red_670.sav', 'MODSr', ['NeI', 'ArI'], 'MODS_red_670.hdf5')
+
 
 # Test
 if __name__ == '__main__':
     flg_tst = 0
     flg_tst += 2**0   # LRISb 600
-    #flg_tst += 2**1   # LRISr 600
-    #flg_tst += 2**2   # Kastb 600
+    flg_tst += 2**1   # LRISr 600
+    flg_tst += 2**2   # Kastb 600
+    flg_tst += 2**3   # MMT RCS 600_6310
+    flg_tst += 2**4   # MODS
 
     main(flg_tst)
