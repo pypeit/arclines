@@ -13,19 +13,19 @@ cdef extern from "math.h":
 
 def triangles(np.ndarray[DTYPE_t, ndim=1] detlines not None,
               np.ndarray[DTYPE_t, ndim=1] linelist not None,
-              int detsrch, int lstsrch, double npixels, double tol):
+              int detsrch, int lstsrch, double npixels, double pixtol):
     """
     detlines - list of detected lines in pixels (sorted, increasing)
     linelist - list of lines that should be detected (sorted, increasing)
     detsrch  - Number of consecutive elements in detlines to use to create a pattern (-1 means all lines in detlines)
     lstsrch  - Number of consecutive elements in linelist to use to create a pattern (-1 means all lines in detlines)
-    tol      - A tolerance that is used to determine if a match is successful
+    pixtol   - A tolerance that is used to determine if a match is successful (in units of pixels)
     """
 
     cdef int nptn = 3  # Number of lines used to create a pattern
     cdef int d, dd, sz_d, xd, cntdet, dup
     cdef int l, ll, sz_l, xl, cntlst, lup
-    cdef double dval, lval, tst
+    cdef double dval, lval, tst, tol
 
     sz_d = detlines.shape[0]
     sz_l = linelist.shape[0]
@@ -67,6 +67,7 @@ def triangles(np.ndarray[DTYPE_t, ndim=1] detlines not None,
             for xd in range(d+1, dd):
                 # Create the test pattern
                 dval = (detlines[xd]-detlines[d])/(detlines[dd]-detlines[d])
+                tol = pixtol/(detlines[dd]-detlines[d])
                 # Search through all possible patterns in the linelist
                 for l in range(0, sz_l-nptn+1):
                     lup = l + lstsrch

@@ -2,6 +2,7 @@
 """
 from __future__ import (print_function, absolute_import, division, unicode_literals)
 
+from scipy.ndimage.filters import gaussian_filter
 import numpy as np
 import pdb
 
@@ -279,3 +280,212 @@ def semi_brute(spec, lines, wv_cen, disp, siglev=20., min_ampl=300.,
 
     # Return
     return best_dict, final_fit
+
+
+def general(spec, lines, siglev=20., min_ampl=300.,
+            outroot=None, debug=False, do_fit=True, verbose=False,
+            fit_parm=None, min_nmatch=0, lowest_ampl=200.):
+    """
+    Parameters
+    ----------
+    spec
+    lines
+    wv_cen
+    disp
+    siglev
+    min_ampl
+    outroot
+    debug
+    do_fit
+    verbose
+    fit_parm
+    min_nmatch
+    lowest_ampl
+
+    Returns
+    -------
+    best_dict : dict
+    final_fit : dict
+
+    """
+    # imports
+    from astropy.table import vstack
+    from linetools import utils as ltu
+    from arclines import plots as arcl_plots
+    from arclines.holy import cypatterns
+
+    # Load line lists
+    line_lists = arcl_io.load_line_lists(lines)
+    unknwns = arcl_io.load_unknown_list(lines)
+
+    npix = spec.size
+
+    # Lines
+    all_tcent, cut_tcent, icut = arch_utils.arc_lines_from_spec(spec, min_ampl=min_ampl)
+
+    # Best
+    best_dict = dict(nmatch=0, ibest=-1, bwv=0., min_ampl=min_ampl)
+
+    pdb.set_trace()
+    ngrid = 1000
+
+    # Loop on unknowns
+    for unknown in [False, True]:
+        if unknown:
+            tot_list = vstack([line_lists,unknwns])
+        else:
+            tot_list = line_lists
+        wvdata = np.array(tot_list['wave'].data)  # Removes mask if any
+        wvdata.sort()
+
+        sav_nmatch = best_dict['nmatch']
+
+        # Loop on pix_tol
+        for pix_tol in [1.,2.]:
+            # Triangle pattern matching
+            dindex, lindex, wvcen, disps = cypatterns.triangles(all_tcent, wvdata, 5, 10, npix, pix_tol)
+            # dindex, lindex, wvcen, disps = arch_patt.triangles(all_tcent, wvdata, 5, 10, npixels, pix_tol)
+
+            # Remove any invalid results
+            ww = np.where((wvcen > 0.0) & (disps > 0.0))
+            dindex = dindex[ww[0], :]
+            lindex = lindex[ww[0], :]
+            disps = disps[ww]
+            wvcen = wvcen[ww]
+
+            # Setup the grids and histogram
+            binw = np.linspace(max(np.min(wvcen), np.min(wvdata)), min(np.max(wvcen), np.max(wvdata)), ngrid)
+            bind = np.linspace(np.min(np.log10(disps)), np.max(np.log10(disps)), ngrid)
+            histimg, xed, yed = np.histogram2d(wvcen, np.log10(disps), bins=[binw, bind])
+            histimg = gaussian_filter(histimg, 3.0)
+            # plt.imshow(histimg, origin="upper")
+            # plt.show()
+
+            bidx = np.unravel_index(np.argmax(histimg), histimg.shape)
+            print("Estimated central wavelength", binw[bidx[0]])
+            print("Estimated dispersion (Angstroms/pixel)", 10.0**bind[bidx[1]])
+
+            # Find all good solutions
+            wlo = binw[bidx[0] - 3]
+            whi = binw[bidx[0] + 3]
+            dlo = 10.0 ** bind[bidx[1] - 3]
+            dhi = 10.0 ** bind[bidx[1] + 3]
+            wgd = np.where((wvcen > wlo) & (wvcen < whi) & (disps > dlo) & (disps < dhi))
+            dindex = dindex[wgd[0], :].flatten()
+            lindex = lindex[wgd[0], :].flatten()
+
+            # Given this solution, fit for all detlines
+            arch_patt.solve_triangles(all_tcent, wvdata, dindex, lindex, best_dict)
+
+        # Save linelist?
+        if best_dict['nmatch'] > sav_nmatch:
+            best_dict['line_list'] = tot_list.copy()
+            best_dict['unknown'] = unknown
+            best_dict['ampl'] = unknown
+
+    # Try to pick up some extras by turning off/on unknowns
+    if best_dict['unknown']:
+        tot_list = line_lists
+    else:
+        tot_list = vstack([line_lists,unknwns])
+    wvdata = np.array(tot_list['wave'].data) # Removes mask if any
+    wvdata.sort()
+    tmp_dict = best_dict.copy()
+    tmp_dict['nmatch'] = 0
+    arch_patt.scan_for_matches(best_dict['bwv'], disp, npix, cut_tcent, wvdata,
+                               best_dict=tmp_dict, pix_tol=best_dict['pix_tol'],
+                               ampl=best_dict['ampl'], wvoff=1.)
+    for kk,ID in enumerate(tmp_dict['IDs']):
+        if (ID > 0.) and (best_dict['IDs'][kk] == 0.):
+            best_dict['IDs'][kk] = ID
+            best_dict['scores'][kk] = tmp_dict['scores'][kk]
+            best_dict['mask'][kk] = True
+            best_dict['midx'][kk] = tmp_dict['midx'][kk]
+            best_dict['nmatch'] += 1
+    #pdb.set_trace()
+
+    if best_dict['nmatch'] == 0:
+        print('---------------------------------------------------')
+        print('Report:')
+        print('::   No matches!  Could be you input a bad wvcen or disp value')
+        print('---------------------------------------------------')
+        return
+
+    # Report
+    print('---------------------------------------------------')
+    print('Report:')
+    print('::   Number of lines recovered = {:d}'.format(all_tcent.size))
+    print('::   Number of lines analyzed = {:d}'.format(cut_tcent.size))
+    print('::   Number of Perf/Good/Ok matches = {:d}'.format(best_dict['nmatch']))
+    print('::   Best central wavelength = {:g}A'.format(best_dict['bwv']))
+    print('::   Best solution used pix_tol = {}'.format(best_dict['pix_tol']))
+    print('::   Best solution had unknown = {}'.format(best_dict['unknown']))
+    print('---------------------------------------------------')
+
+    if debug:
+        match_idx = best_dict['midx']
+        for kk in match_idx.keys():
+            uni, counts = np.unique(match_idx[kk]['matches'], return_counts=True)
+            print('kk={}, {}, {}, {}'.format(kk, uni, counts, np.sum(counts)))
+
+    # Write scores
+    #out_dict = best_dict['scores']
+    #jdict = ltu.jsonify(out_dict)
+    #ltu.savejson(pargs.outroot+'.scores', jdict, easy_to_read=True, overwrite=True)
+
+    # Write IDs
+    if outroot is not None:
+        out_dict = dict(pix=cut_tcent, IDs=best_dict['IDs'])
+        jdict = ltu.jsonify(out_dict)
+        ltu.savejson(outroot+'.json', jdict, easy_to_read=True, overwrite=True)
+        print("Wrote: {:s}".format(outroot+'.json'))
+
+    # Plot
+    if outroot is not None:
+        tmp_list = vstack([line_lists,unknwns])
+        arcl_plots.match_qa(spec, cut_tcent, tmp_list,
+                            best_dict['IDs'], best_dict['scores'], outroot+'.pdf')
+        print("Wrote: {:s}".format(outroot+'.pdf'))
+
+    # Fit
+    final_fit = None
+    if do_fit:
+        '''
+        # Read in Full NIST Tables
+        full_NIST = arcl_io.load_line_lists(lines, NIST=True)
+        # KLUDGE!!!!!
+        keep = full_NIST['wave'] > 8800.
+        pdb.set_trace()
+        line_lists = vstack([line_lists, full_NIST[keep]])
+        '''
+        #
+        NIST_lines = line_lists['NIST'] > 0
+        ifit = np.where(best_dict['mask'])[0]
+        if outroot is not None:
+            plot_fil = outroot+'_fit.pdf'
+        else:
+            plot_fil = None
+        # Purge UNKNOWNS from ifit
+        imsk = np.array([True]*len(ifit))
+        for kk, idwv in enumerate(np.array(best_dict['IDs'])[ifit]):
+            if np.min(np.abs(line_lists['wave'][NIST_lines]-idwv)) > 0.01:
+                imsk[kk] = False
+        ifit = ifit[imsk]
+        # Allow for weaker lines in the fit
+        all_tcent, weak_cut_tcent, icut = arch_utils.arc_lines_from_spec(spec, min_ampl=lowest_ampl)
+        add_weak = []
+        for weak in weak_cut_tcent:
+            if np.min(np.abs(cut_tcent-weak)) > 5.:
+                add_weak += [weak]
+        if len(add_weak) > 0:
+            cut_tcent = np.concatenate([cut_tcent, np.array(add_weak)])
+        # Fit
+        final_fit = arch_fit.iterative_fitting(spec, cut_tcent, ifit,
+                                               np.array(best_dict['IDs'])[ifit], line_lists[NIST_lines],
+                                               disp, plot_fil=plot_fil, verbose=verbose, aparm=fit_parm)
+        if plot_fil is not None:
+            print("Wrote: {:s}".format(plot_fil))
+
+    # Return
+    return best_dict, final_fit
+
