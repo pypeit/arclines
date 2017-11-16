@@ -350,30 +350,26 @@ def solve_triangles(detlines, linelist, dindex, lindex, best_dict=None):
     # Find the best ID of each line
     detids = np.zeros(nlines)
     scores = ['None' for xx in range(nlines)]
+    mask = np.zeros(nlines, dtype=np.bool)
+    ngd_match = 0
     for dd in range(nlines):
         ww = np.where(dindex == dd)
         if ww[0].size == 0:
             continue
         unq, cnts = np.unique(lindex[ww], return_counts=True)
         detids[dd] = linelist[unq[np.argmax(cnts)]]
-        scores[dd] = score_triangles(cnts)
+        scr = score_triangles(cnts)
+        scores[dd] = scr
+        if scr in ["Perfect", "Very Good", "Good", "OK"]:
+            mask[dd] = True
+            ngd_match += 1
 
     # Iteratively fit this solution, and ID all lines.
-
     if ngd_match > best_dict['nmatch']:
-        best_dict['nmatch'] = ngd_match
-        best_dict['midx'] = match_idx
         best_dict['mask'] = mask
+        best_dict['nmatch'] = ngd_match
         best_dict['scores'] = scores
-        best_dict['ibest'] = ss
-        best_dict['bwv'] = iwv_cen
-        best_dict['IDs'] = IDs
-        # Search parameters
-        best_dict['swv_uncertainty'] = swv_uncertainty
-        best_dict['wvoff'] = wvoff
-        best_dict['pix_tol'] = pix_tol
-        best_dict['ampl'] = ampl
-
+        best_dict['IDs'] = detids
     return
 
 
