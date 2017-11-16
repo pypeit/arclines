@@ -322,11 +322,11 @@ def general(spec, lines, siglev=20., min_ampl=300.,
 
     # Lines
     all_tcent, cut_tcent, icut = arch_utils.arc_lines_from_spec(spec, min_ampl=min_ampl)
+    use_tcent = all_tcent.copy()
 
     # Best
     best_dict = dict(nmatch=0, ibest=-1, bwv=0., min_ampl=min_ampl)
 
-    pdb.set_trace()
     ngrid = 1000
 
     # Loop on unknowns
@@ -341,9 +341,9 @@ def general(spec, lines, siglev=20., min_ampl=300.,
         sav_nmatch = best_dict['nmatch']
 
         # Loop on pix_tol
-        for pix_tol in [1.,2.]:
+        for pix_tol in [1., 2.]:
             # Triangle pattern matching
-            dindex, lindex, wvcen, disps = cypatterns.triangles(all_tcent, wvdata, 5, 10, npix, pix_tol)
+            dindex, lindex, wvcen, disps = cypatterns.triangles(use_tcent, wvdata, 5, 10, npix, pix_tol)
             # dindex, lindex, wvcen, disps = arch_patt.triangles(all_tcent, wvdata, 5, 10, npixels, pix_tol)
 
             # Remove any invalid results
@@ -361,9 +361,8 @@ def general(spec, lines, siglev=20., min_ampl=300.,
             # plt.imshow(histimg, origin="upper")
             # plt.show()
 
+            # Find the best combination of central wavelength and dispersion
             bidx = np.unravel_index(np.argmax(histimg), histimg.shape)
-            print("Estimated central wavelength", binw[bidx[0]])
-            print("Estimated dispersion (Angstroms/pixel)", 10.0**bind[bidx[1]])
 
             # Find all good solutions
             wlo = binw[bidx[0] - 3]
@@ -375,10 +374,14 @@ def general(spec, lines, siglev=20., min_ampl=300.,
             lindex = lindex[wgd[0], :].flatten()
 
             # Given this solution, fit for all detlines
-            arch_patt.solve_triangles(all_tcent, wvdata, dindex, lindex, best_dict)
+            arch_patt.solve_triangles(use_tcent, wvdata, dindex, lindex, best_dict)
+            if best_dict['nmatch'] > sav_nmatch:
+                best_dict['pix_tol'] = pix_tol
 
         # Save linelist?
         if best_dict['nmatch'] > sav_nmatch:
+            best_dict['bwv'] = binw[bidx[0]]
+            best_dict['bdisp'] = 10.0**bind[bidx[1]]
             best_dict['line_list'] = tot_list.copy()
             best_dict['unknown'] = unknown
             best_dict['ampl'] = unknown
@@ -388,76 +391,47 @@ def general(spec, lines, siglev=20., min_ampl=300.,
         tot_list = line_lists
     else:
         tot_list = vstack([line_lists,unknwns])
-    wvdata = np.array(tot_list['wave'].data) # Removes mask if any
+
+    # Retrieve the wavelengths of the linelist and sort
+    wvdata = np.array(tot_list['wave'].data)  # Removes mask if any
     wvdata.sort()
-    tmp_dict = best_dict.copy()
-    tmp_dict['nmatch'] = 0
-    arch_patt.scan_for_matches(best_dict['bwv'], disp, npix, cut_tcent, wvdata,
-                               best_dict=tmp_dict, pix_tol=best_dict['pix_tol'],
-                               ampl=best_dict['ampl'], wvoff=1.)
-    for kk,ID in enumerate(tmp_dict['IDs']):
-        if (ID > 0.) and (best_dict['IDs'][kk] == 0.):
-            best_dict['IDs'][kk] = ID
-            best_dict['scores'][kk] = tmp_dict['scores'][kk]
-            best_dict['mask'][kk] = True
-            best_dict['midx'][kk] = tmp_dict['midx'][kk]
-            best_dict['nmatch'] += 1
-    #pdb.set_trace()
 
     if best_dict['nmatch'] == 0:
         print('---------------------------------------------------')
         print('Report:')
-        print('::   No matches!  Could be you input a bad wvcen or disp value')
+        print('::   No matches! Try another algorithm')
         print('---------------------------------------------------')
         return
 
     # Report
     print('---------------------------------------------------')
     print('Report:')
-    print('::   Number of lines recovered = {:d}'.format(all_tcent.size))
-    print('::   Number of lines analyzed = {:d}'.format(cut_tcent.size))
-    print('::   Number of Perf/Good/Ok matches = {:d}'.format(best_dict['nmatch']))
-    print('::   Best central wavelength = {:g}A'.format(best_dict['bwv']))
-    print('::   Best solution used pix_tol = {}'.format(best_dict['pix_tol']))
-    print('::   Best solution had unknown = {}'.format(best_dict['unknown']))
+    print('::   Number of lines recovered    = {:d}'.format(all_tcent.size))
+    print('::   Number of lines analyzed     = {:d}'.format(use_tcent.size))
+    print('::   Number of acceptable matches = {:d}'.format(best_dict['nmatch']))
+    print('::   Best central wavelength      = {:g}A'.format(best_dict['bwv']))
+    print('::   Best dispersion              = {:g}A/pix'.format(best_dict['bdisp']))
+    print('::   Best solution used pix_tol   = {}'.format(best_dict['pix_tol']))
+    print('::   Best solution had unknown    = {}'.format(best_dict['unknown']))
     print('---------------------------------------------------')
-
-    if debug:
-        match_idx = best_dict['midx']
-        for kk in match_idx.keys():
-            uni, counts = np.unique(match_idx[kk]['matches'], return_counts=True)
-            print('kk={}, {}, {}, {}'.format(kk, uni, counts, np.sum(counts)))
-
-    # Write scores
-    #out_dict = best_dict['scores']
-    #jdict = ltu.jsonify(out_dict)
-    #ltu.savejson(pargs.outroot+'.scores', jdict, easy_to_read=True, overwrite=True)
 
     # Write IDs
     if outroot is not None:
-        out_dict = dict(pix=cut_tcent, IDs=best_dict['IDs'])
+        out_dict = dict(pix=use_tcent, IDs=best_dict['IDs'])
         jdict = ltu.jsonify(out_dict)
         ltu.savejson(outroot+'.json', jdict, easy_to_read=True, overwrite=True)
         print("Wrote: {:s}".format(outroot+'.json'))
 
     # Plot
     if outroot is not None:
-        tmp_list = vstack([line_lists,unknwns])
-        arcl_plots.match_qa(spec, cut_tcent, tmp_list,
+        tmp_list = vstack([line_lists, unknwns])
+        arcl_plots.match_qa(spec, use_tcent, tmp_list,
                             best_dict['IDs'], best_dict['scores'], outroot+'.pdf')
         print("Wrote: {:s}".format(outroot+'.pdf'))
 
     # Fit
     final_fit = None
     if do_fit:
-        '''
-        # Read in Full NIST Tables
-        full_NIST = arcl_io.load_line_lists(lines, NIST=True)
-        # KLUDGE!!!!!
-        keep = full_NIST['wave'] > 8800.
-        pdb.set_trace()
-        line_lists = vstack([line_lists, full_NIST[keep]])
-        '''
         #
         NIST_lines = line_lists['NIST'] > 0
         ifit = np.where(best_dict['mask'])[0]
@@ -473,19 +447,20 @@ def general(spec, lines, siglev=20., min_ampl=300.,
         ifit = ifit[imsk]
         # Allow for weaker lines in the fit
         all_tcent, weak_cut_tcent, icut = arch_utils.arc_lines_from_spec(spec, min_ampl=lowest_ampl)
+        use_weak_tcent = all_tcent.copy()
         add_weak = []
-        for weak in weak_cut_tcent:
-            if np.min(np.abs(cut_tcent-weak)) > 5.:
+        for weak in use_weak_tcent:
+            if np.min(np.abs(use_tcent-weak)) > 5.:
                 add_weak += [weak]
         if len(add_weak) > 0:
-            cut_tcent = np.concatenate([cut_tcent, np.array(add_weak)])
+            use_tcent = np.concatenate([use_tcent, np.array(add_weak)])
         # Fit
-        final_fit = arch_fit.iterative_fitting(spec, cut_tcent, ifit,
+        final_fit = arch_fit.iterative_fitting(spec, use_tcent, ifit,
                                                np.array(best_dict['IDs'])[ifit], line_lists[NIST_lines],
-                                               disp, plot_fil=plot_fil, verbose=verbose, aparm=fit_parm)
+                                               best_dict['bdisp'], plot_fil=plot_fil, verbose=verbose,
+                                               aparm=fit_parm)
         if plot_fil is not None:
             print("Wrote: {:s}".format(plot_fil))
 
     # Return
     return best_dict, final_fit
-
