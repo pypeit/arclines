@@ -312,7 +312,12 @@ def general(spec, lines, siglev=20., min_ampl=300.,
     from astropy.table import vstack
     from linetools import utils as ltu
     from arclines import plots as arcl_plots
-    from arclines.holy import cypatterns
+
+    # Import the triangles algorithm
+    try:
+        from arclines.holy.cypatterns import triangles
+    except ImportError:
+        from arclines.holy .patterns import triangles
 
     # Load line lists
     line_lists = arcl_io.load_line_lists(lines)
@@ -341,10 +346,9 @@ def general(spec, lines, siglev=20., min_ampl=300.,
         sav_nmatch = best_dict['nmatch']
 
         # Loop on pix_tol
-        for pix_tol in [1., 2.]:
+        for pix_tol in [1.]:#, 2.]:
             # Triangle pattern matching
-            dindex, lindex, wvcen, disps = cypatterns.triangles(use_tcent, wvdata, 5, 10, npix, pix_tol)
-            # dindex, lindex, wvcen, disps = arch_patt.triangles(all_tcent, wvdata, 5, 10, npixels, pix_tol)
+            dindex, lindex, wvcen, disps = triangles(use_tcent, wvdata, 5, 10, npix, pix_tol)
 
             # Remove any invalid results
             ww = np.where((wvcen > 0.0) & (disps > 0.0))
@@ -357,18 +361,28 @@ def general(spec, lines, siglev=20., min_ampl=300.,
             binw = np.linspace(max(np.min(wvcen), np.min(wvdata)), min(np.max(wvcen), np.max(wvdata)), ngrid)
             bind = np.linspace(np.min(np.log10(disps)), np.max(np.log10(disps)), ngrid)
             histimg, xed, yed = np.histogram2d(wvcen, np.log10(disps), bins=[binw, bind])
-            histimg = gaussian_filter(histimg, 3.0)
-            # plt.imshow(histimg, origin="upper")
-            # plt.show()
+            histimg = gaussian_filter(histimg, 3)
 
             # Find the best combination of central wavelength and dispersion
             bidx = np.unravel_index(np.argmax(histimg), histimg.shape)
 
+            debug = False
+            if debug:
+                from matplotlib import pyplot as plt
+                plt.clf()
+                plt.imshow(histimg[:, ::-1].T, extent=[binw[0], binw[-1], bind[0], bind[-1]], aspect='auto')
+                plt.axvline(binw[bidx[0]], color='r', linestyle='--')
+                plt.axhline(bind[bidx[1]], color='r', linestyle='--')
+                plt.show()
+                print(histimg[bidx], binw[bidx[0]], 10.0**bind[bidx[1]])
+                pdb.set_trace()
+
             # Find all good solutions
-            wlo = binw[bidx[0] - 3]
-            whi = binw[bidx[0] + 3]
-            dlo = 10.0 ** bind[bidx[1] - 3]
-            dhi = 10.0 ** bind[bidx[1] + 3]
+            nsel = 5  # Select all solutions around the best solution within a square of side 2*nsel
+            wlo = binw[bidx[0] - nsel]
+            whi = binw[bidx[0] + nsel]
+            dlo = 10.0 ** bind[bidx[1] - 5*nsel]
+            dhi = 10.0 ** bind[bidx[1] + 5*nsel]
             wgd = np.where((wvcen > wlo) & (wvcen < whi) & (disps > dlo) & (disps < dhi))
             dindex = dindex[wgd[0], :].flatten()
             lindex = lindex[wgd[0], :].flatten()
