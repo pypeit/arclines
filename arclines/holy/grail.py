@@ -290,8 +290,6 @@ def general(spec, lines, siglev=20., min_ampl=300.,
     ----------
     spec
     lines
-    wv_cen
-    disp
     siglev
     min_ampl
     outroot
@@ -317,7 +315,7 @@ def general(spec, lines, siglev=20., min_ampl=300.,
     try:
         from arclines.holy.cypatterns import triangles
     except ImportError:
-        from arclines.holy .patterns import triangles
+        from arclines.holy.patterns import triangles
 
     # Load line lists
     line_lists = arcl_io.load_line_lists(lines)

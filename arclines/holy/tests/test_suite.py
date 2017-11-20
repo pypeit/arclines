@@ -17,7 +17,7 @@ import arclines
 test_arc_path = arclines.__path__[0]+'/data/test_arcs/'
 outdir = 'TEST_SUITE_OUTPUT/'
 
-def tst_holy(name, spec_file, lines, wv_cen, disp, score, fidx):
+def tst_holy(name, spec_file, lines, wv_cen, disp, score, fidx, test='semi_brute'):
 
     # Favored parameters (should match those in the defaults)
     siglev=20.
@@ -38,8 +38,15 @@ def tst_holy(name, spec_file, lines, wv_cen, disp, score, fidx):
 
     # Run
     outroot = outdir+name
-    best_dict, final_fit = grail.semi_brute(spec, lines, wv_cen, disp, siglev=siglev,
+    if test == 'semi_brute':
+        best_dict, final_fit = grail.semi_brute(spec, lines, wv_cen, disp, siglev=siglev,
                              min_ampl=min_ampl, min_nmatch=10, outroot=outroot)
+    elif test == 'general':
+        best_dict, final_fit = grail.semi_brute(spec, lines, siglev=siglev,
+                                                min_ampl=min_ampl, min_nmatch=10, outroot=outroot)
+    else:
+        pdb.set_trace()
+
     # Score
     grade = 'PASSED'
     if final_fit['rms'] > score['rms']:
@@ -57,6 +64,11 @@ def tst_holy(name, spec_file, lines, wv_cen, disp, score, fidx):
 
 
 def main(flg_tst):
+
+    if flg_tst in [1]:
+        test = 'semi_brute'
+    elif flg_tst in [2]:
+        test = 'general'
 
     # LRISb 600/4000 with the longslit
     names = ['LRISb_600_4000_longslit']
@@ -132,7 +144,8 @@ def main(flg_tst):
             names,src_files,all_lines,all_wvcen,all_disp,scores,fidxs):
         #if '8500' not in name:
         #    continue
-        grade, best_dict, final_fit = tst_holy(name, src_file, lines, wvcen, disp, score, fidx)
+        grade, best_dict, final_fit = tst_holy(name, src_file, lines, wvcen, disp, score, fidx,
+                                               test=test)
         sv_grade.append(grade)
         #if '900' in name:
         #    pdb.set_trace()
@@ -145,12 +158,7 @@ def main(flg_tst):
 
 # Test
 if __name__ == '__main__':
-    flg_tst = 0
-    flg_tst += 2**0   # Run em all
-    #flg_tst += 2**1   # Kastb
-    #flg_tst += 2**2   # LRISb with unknown wv_cen
-    #flg_tst += 2**3   # LRISb off to red with unknown wv_cen
-    #flg_tst += 2**4   # LRISr nominal
-    #flg_tst += 2**5   # LRISr 400/8500
+    #flg_tst = 1   # Run em all with semi-brute
+    flg_tst = 2   # Run em all with general
 
     main(flg_tst)
