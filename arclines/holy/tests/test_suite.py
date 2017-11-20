@@ -42,7 +42,7 @@ def tst_holy(name, spec_file, lines, wv_cen, disp, score, fidx, test='semi_brute
         best_dict, final_fit = grail.semi_brute(spec, lines, wv_cen, disp, siglev=siglev,
                              min_ampl=min_ampl, min_nmatch=10, outroot=outroot)
     elif test == 'general':
-        best_dict, final_fit = grail.semi_brute(spec, lines, siglev=siglev,
+        best_dict, final_fit = grail.general(spec, lines, siglev=siglev,
                                                 min_ampl=min_ampl, min_nmatch=10, outroot=outroot)
     else:
         pdb.set_trace()
