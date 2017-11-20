@@ -193,7 +193,7 @@ def load_low_redux(version, src_file, ions, plot=False, min_hist=10,
         disp = np.median(np.abs(wave-np.roll(wave,1)))
         npix = wave.size
         # Find peaks for extras
-        tampl, tcent, twid, w, yprep = find_peaks(spec, siglev=10.)
+        tampl, tcent, twid, w, yprep = find_peaks(spec)
         all_tcent = tcent[w]
 
         # Function for more precise wavelengths

@@ -5,7 +5,7 @@ from __future__ import (print_function, absolute_import, division, unicode_liter
 import numpy as np
 
 
-def arc_lines_from_spec(spec, siglev=20., min_ampl=300.):
+def arc_lines_from_spec(spec, min_ampl=300.):
     """
     Parameters
     ----------
@@ -21,7 +21,7 @@ def arc_lines_from_spec(spec, siglev=20., min_ampl=300.):
     # imports
     from arclines.pypit_utils import find_peaks
     # Find peaks
-    tampl, tcent, twid, w, yprep = find_peaks(spec, siglev=siglev)
+    tampl, tcent, twid, w, yprep = find_peaks(spec)
     all_tcent = tcent[w]
     all_tampl = tampl[w]
 

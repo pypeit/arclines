@@ -7,7 +7,7 @@ import numpy as np
 import pdb
 
 
-def find_peaks(censpec, siglev=2.0, bpfit=5):
+def find_peaks(censpec):
     """
     Parameters
     ----------

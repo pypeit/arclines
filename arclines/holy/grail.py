@@ -49,7 +49,7 @@ def basic(spec, lines, wv_cen, disp, siglev=20., min_ampl=300.,
     wvdata = wvdata[isrt]
 
     # Find peaks
-    all_tcent, cut_tcent, icut = arch_utils.arc_lines_from_spec(spec, siglev=siglev, min_ampl=min_ampl)
+    all_tcent, cut_tcent, icut = arch_utils.arc_lines_from_spec(spec, min_ampl=min_ampl)
 
     # Matching
     match_idx, scores = arch_patt.run_quad_match(cut_tcent, wave, wvdata,
@@ -324,7 +324,7 @@ def general(spec, lines, siglev=20., min_ampl=300.,
     npix = spec.size
 
     # Lines
-    all_tcent, cut_tcent, icut = arch_utils.arc_lines_from_spec(spec, siglev=1.0, min_ampl=min_ampl)
+    all_tcent, cut_tcent, icut = arch_utils.arc_lines_from_spec(spec, min_ampl=min_ampl)
     use_tcent = all_tcent.copy()
 
     # Best
