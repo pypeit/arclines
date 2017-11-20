@@ -13,7 +13,7 @@ cdef extern from "math.h":
 
 def triangles(np.ndarray[DTYPE_t, ndim=1] detlines not None,
               np.ndarray[DTYPE_t, ndim=1] linelist not None,
-              int detsrch, int lstsrch, double npixels, double pixtol):
+              double npixels, int detsrch, int lstsrch, double pixtol):
     """
     detlines - list of detected lines in pixels (sorted, increasing)
     linelist - list of lines that should be detected (sorted, increasing)

@@ -225,7 +225,7 @@ def score_quad_matches(fidx):
     return scores
 
 
-def triangles(detlines, linelist, detsrch, lstsrch, npixels, pixtol):
+def triangles(detlines, linelist, npixels, detsrch=5, lstsrch=10, pixtol=1.0):
     """
     Parameters
     ----------
@@ -233,6 +233,8 @@ def triangles(detlines, linelist, detsrch, lstsrch, npixels, pixtol):
       list of detected lines in pixels (sorted, increasing)
     linelist : ndarray
       list of lines that should be detected (sorted, increasing)
+    npixels : float
+      Number of pixels along the dispersion direction
     detsrch : int
       Number of consecutive elements in detlines to use to create a pattern (-1 means all lines in detlines)
     lstsrch : int

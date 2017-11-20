@@ -346,7 +346,7 @@ def general(spec, lines, siglev=20., min_ampl=300.,
         # Loop on pix_tol
         for pix_tol in [1.]:#, 2.]:
             # Triangle pattern matching
-            dindex, lindex, wvcen, disps = triangles(use_tcent, wvdata, 5, 10, npix, pix_tol)
+            dindex, lindex, wvcen, disps = triangles(use_tcent, wvdata, npix, 5, 10, pix_tol)
 
             # Remove any invalid results
             ww = np.where((wvcen > 0.0) & (disps > 0.0))
