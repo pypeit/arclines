@@ -115,7 +115,8 @@ def main(flg_tst, nsample=1000):
     for i in range(nsample):
         # Generate a new set of fake data
         detlines, linelist, idxlines = gen_fakedata(wavecen, disp, nonlinear, npixels=npixels)
-        grade, best_dict, final_fit = tst_holy(detlines, linelist, idxlines, npixels=npixels, test=test)
+        spec = GENERATE SPECTRUM USING DETLINES
+        grade, best_dict, final_fit = tst_holy(spec, linelist, idxlines, npixels=npixels, test=test)
         sv_grade.append(grade)
 
     # Report it
