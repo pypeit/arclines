@@ -282,7 +282,7 @@ def semi_brute(spec, lines, wv_cen, disp, siglev=20., min_ampl=300.,
     return best_dict, final_fit
 
 
-def general(spec, lines, siglev=20., min_ampl=300.,
+def general(spec, lines, siglev=20., min_ampl=300., islinelist=False,
             outroot=None, debug=False, do_fit=True, verbose=False,
             fit_parm=None, min_nmatch=0, lowest_ampl=200.):
     """
@@ -292,6 +292,8 @@ def general(spec, lines, siglev=20., min_ampl=300.,
     lines
     siglev
     min_ampl
+    islinelist : bool
+      Is lines a linelist (True), or a list of ions (False)
     outroot
     debug
     do_fit
@@ -317,9 +319,13 @@ def general(spec, lines, siglev=20., min_ampl=300.,
     except ImportError:
         from arclines.holy.patterns import triangles
 
-    # Load line lists
-    line_lists = arcl_io.load_line_lists(lines)
-    unknwns = arcl_io.load_unknown_list(lines)
+    if islinelist:
+        line_lists = lines.copy()
+        unknwns = np.array([])
+    else:
+        # Load line lists
+        line_lists = arcl_io.load_line_lists(lines)
+        unknwns = arcl_io.load_unknown_list(lines)
 
     npix = spec.size
 
@@ -335,7 +341,7 @@ def general(spec, lines, siglev=20., min_ampl=300.,
     # Loop on unknowns
     for unknown in [False, True]:
         if unknown:
-            tot_list = vstack([line_lists,unknwns])
+            tot_list = vstack([line_lists, unknwns])
         else:
             tot_list = line_lists
         wvdata = np.array(tot_list['wave'].data)  # Removes mask if any
