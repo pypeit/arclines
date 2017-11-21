@@ -9,40 +9,18 @@ import pdb
 
 from arclines.holy import grail
 
-import arclines
-test_arc_path = arclines.__path__[0]+'/data/test_arcs/'
-outdir = 'TEST_SUITE_OUTPUT/'
 
-
-def tst_holy(name, spec_file, lines, wv_cen, disp, score, fidx, test='semi_brute'):
-
-    # Favored parameters (should match those in the defaults)
-    siglev=20.
-    min_ampl=1000.
-    min_match = 10
-
-    # Load spectrum
-    exten = spec_file.split('.')[-1]
-    if exten == 'json':
-        with open(test_arc_path+spec_file,'r') as f:
-            pypit_fit = json.load(f)
-        spec = np.array(pypit_fit['spec'])
-    elif exten == 'hdf5':
-        hdf = h5py.File(test_arc_path+spec_file,'r')
-        spec = hdf['arcs/{:d}/spec'.format(fidx)].value
-    else:
-        pdb.set_trace()
+def tst_holy(spec, lines, idx, npixels=2048, test='semi_brute'):
 
     # Run
-    outroot = outdir+name
     if test == 'semi_brute':
-        best_dict, final_fit = grail.semi_brute(spec, lines, wv_cen, disp, siglev=siglev,
-                                                min_ampl=min_ampl, min_nmatch=10, outroot=outroot)
+        print("Not implemented yet!")
     elif test == 'general':
-        best_dict, final_fit = grail.general(spec, lines, siglev=siglev,
-                                             min_ampl=min_ampl, min_nmatch=10, outroot=outroot)
+        best_dict, final_fit = grail.general(spec, lines, npix=npixels, isspec=False, islinelist=True)
     else:
         pdb.set_trace()
+
+    pdb.set_trace()
 
     # Score
     grade = 'PASSED'
@@ -129,21 +107,20 @@ def main(flg_tst, nsample=1000):
     elif flg_tst in [2]:
         test = 'general'
 
+    wavecen, disp, nonlinear = 5000.0, 1.0, 0.1
+    npixels = 2048
+
     # Run it
-    sv_grade = [] # for the end, just in case
-    for name,src_file,lines,wvcen,disp,score,fidx in zip(
-            names,src_files,all_lines,all_wvcen,all_disp,scores,fidxs):
-        #if '8500' not in name:
-        #    continue
-        grade, best_dict, final_fit = tst_holy(name, src_file, lines, wvcen, disp, score, fidx,
-                                               test=test)
+    sv_grade = []  # for the end, just in case
+    for i in range(nsample):
+        # Generate a new set of fake data
+        detlines, linelist, idxlines = gen_fakedata(wavecen, disp, nonlinear, npixels=npixels)
+        grade, best_dict, final_fit = tst_holy(detlines, linelist, idxlines, npixels=npixels, test=test)
         sv_grade.append(grade)
-        #if '900' in name:
-        #    pdb.set_trace()
 
     # Report it
     print('==============================================================')
-    for name,grade in zip(names,sv_grade):
+    for name, grade in zip(names,sv_grade):
         print("{:s} {:s}".format(name,grade))
 
 
