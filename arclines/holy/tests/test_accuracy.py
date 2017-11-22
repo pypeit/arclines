@@ -1,21 +1,18 @@
-""" Run the current, favored holy grail routine on a set of
-standard input spectra.  Generate summary output
+""" Generate a series of fake data and test how well
+the calibration algorithm recovers the correct result
 """
 from __future__ import (print_function, absolute_import, division, unicode_literals)
 
 import numpy as np
-import json
-import h5py
 import warnings
 import pdb
 
 from arclines.holy import grail
 
-#from xastropy.xutils import xdebug as xdb
-
 import arclines
 test_arc_path = arclines.__path__[0]+'/data/test_arcs/'
 outdir = 'TEST_SUITE_OUTPUT/'
+
 
 def tst_holy(name, spec_file, lines, wv_cen, disp, score, fidx, test='semi_brute'):
 
@@ -40,10 +37,10 @@ def tst_holy(name, spec_file, lines, wv_cen, disp, score, fidx, test='semi_brute
     outroot = outdir+name
     if test == 'semi_brute':
         best_dict, final_fit = grail.semi_brute(spec, lines, wv_cen, disp, siglev=siglev,
-                             min_ampl=min_ampl, min_nmatch=10, outroot=outroot)
+                                                min_ampl=min_ampl, min_nmatch=10, outroot=outroot)
     elif test == 'general':
         best_dict, final_fit = grail.general(spec, lines, siglev=siglev,
-                                                min_ampl=min_ampl, min_nmatch=10, outroot=outroot)
+                                             min_ampl=min_ampl, min_nmatch=10, outroot=outroot)
     else:
         pdb.set_trace()
 
@@ -63,80 +60,74 @@ def tst_holy(name, spec_file, lines, wv_cen, disp, score, fidx, test='semi_brute
     return grade, best_dict, final_fit
 
 
-def main(flg_tst):
+def gen_fakedata(wavecen, disp, nonlinear, ndet=25, nlines=100, nspurious=5, rms=0.1, npixels=2048):
+    """
+    Generate a fake linelist and fake data.
+
+    Parameters
+    ----------
+    wavecen : float
+      Central wavelength
+    disp : float
+      Spectral dispersion (Angstroms/pixel)
+    nonlinear : float
+      As a percentage, how non-linear is the pixel-wavelength solution
+    ndet : int
+      Number of detected lines used for the fake data
+    nlines : int
+      Number of lines to be used in the linelist
+    nspurious : int
+      Number of lines detected in the data but are not in the linelist
+    rms : float
+      Perturb each line detection by a fraction of a pixel
+    npixels : int
+      Number of pixels in the dispersion direction
+
+    Returns
+    -------
+    detlines : ndarray
+      Fake data (including spurious)
+    linelist : ndarray
+      Fake linelist (including spurious)
+    detidx : ndarray
+      mask containing 0's (spurious) or the index in the linelist of each detection
+    """
+
+    # Randomly choose whether pixels correlate or anticorrelate with wavelength
+    sign = np.random.choice([-1.0, 1.0])
+
+    # Setup a linear coefficient array
+    wavcoeff = np.array([sign*disp*npixels/2.0, wavecen])
+
+    # Generate random pixels on a detector
+    pixlist = np.random.uniform(-1.0, 1.0, ndet)
+    pixspur = np.random.uniform(-1.0, 1.0, nspurious)
+
+    # Perturb the linear values onto a non-linear solution
+    nlncoeff = np.array([np.random.uniform(-nonlinear, +nonlinear), 0.0, 1.0])
+
+    # Determine their wavelengths
+    waves = np.polyval(wavcoeff, pixlist) * np.polyval(nlncoeff, pixlist)
+    linelist = np.append(waves, np.random.uniform(3000.0, 10000.0, nlines))
+    linelist.sort()
+
+    # Get true list
+    truwaves = np.polyval(wavcoeff, pixlist) * np.polyval(nlncoeff, pixlist)
+
+    # Pick ndet pixels that are detected and add in nspurious
+    detlines = npixels * (np.append(pixlist, pixspur) + 1.0) / 2.0
+    idxlines = np.append(np.searchsorted(linelist, truwaves), np.zeros(nspurious, dtype=np.int))
+    srt = np.argsort(detlines)
+    detlines += np.random.normal(0.0, rms, detlines.size)
+    return detlines[srt], linelist, idxlines[srt]
+
+
+def main(flg_tst, nsample=1000):
 
     if flg_tst in [1]:
         test = 'semi_brute'
     elif flg_tst in [2]:
         test = 'general'
-
-    # LRISb 600/4000 with the longslit
-    names = ['LRISb_600_4000_longslit']
-    src_files = ['lrisb_600_4000_PYPIT.json']
-    all_lines = [['CdI','HgI','ZnI']]
-    all_wvcen = [4400.]
-    all_disp = [1.26]
-    fidxs = [0]
-    scores = [dict(rms=0.13, nxfit=13, nmatch=10)]
-
-    '''
-    # LRISb off-center
-    # NeI lines are seen beyond the dicrhoic but are ignored
-    names += ['LRISb_600_4000_red']
-    src_files += ['LRISb_600_LRX.hdf5']  # Create with low_redux.py if needed
-    all_wvcen += [5000.]
-    all_disp += [1.26]
-    all_lines += [['CdI','ZnI','HgI']]  #,'NeI']]
-    fidxs += [18]
-    scores += [dict(rms=0.08, nxfit=10, nmatch=10)]
-    '''
-
-    # LRISr 600/7500 longslit
-    names += ['LRISr_600_7500_longslit']
-    src_files += ['lrisr_600_7500_PYPIT.json']
-    all_wvcen += [7000.]
-    all_disp += [1.6]
-    all_lines += [['ArI','HgI','KrI','NeI','XeI']]
-    fidxs += [-1]
-    scores += [dict(rms=0.08, nxfit=30, nmatch=50)]
-
-    '''
-    # LRISr 900/XX00 longslit -- blue
-    names += ['LRISr_900_XX00_longslit']
-    src_files += ['lrisr_900_XX00_PYPIT.json']
-    all_wvcen += [5800.]
-    all_disp += [1.08]
-    all_lines += [['ArI','HgI','KrI','NeI','XeI','CdI','ZnI']]
-    fidxs += [-1]
-    scores += [dict(rms=0.08, nxfit=10, nmatch=10)]
-    '''
-
-    # LRISr 400/8500 longslit -- red
-    names += ['LRISr_400_8500_longslit']
-    src_files += ['lrisr_400_8500_PYPIT.json']
-    all_wvcen += [8000.]
-    all_disp += [2.382]
-    all_lines += [['ArI','HgI','KrI','NeI','XeI']]
-    fidxs += [-1]
-    scores += [dict(rms=0.12, nxfit=40, nmatch=40)]
-
-    # Kastb 600 grism
-    names += ['KASTb_600_standard']
-    src_files += ['kastb_600_PYPIT.json']
-    all_lines += [['CdI','HeI','HgI']]
-    all_wvcen += [4400.]
-    all_disp += [1.02]
-    fidxs += [0]
-    scores += [dict(rms=0.1, nxfit=13, nmatch=10)]
-
-    # Kastr 600/7500 grating
-    names += ['KASTr_600_7500_standard']
-    src_files += ['kastr_600_7500_PYPIT.json']
-    all_lines += [['ArI','NeI','HgI']]
-    all_wvcen += [6800.]
-    all_disp += [2.345]
-    fidxs += [0]
-    scores += [dict(rms=0.1, nxfit=20, nmatch=20)]
 
     # Run it
     sv_grade = [] # for the end, just in case

@@ -181,6 +181,7 @@ def scan_for_matches(wvcen, disp, npix, cut_tcent, wvdata, best_dict=None,
             best_dict['pix_tol'] = pix_tol
             best_dict['ampl'] = ampl
 
+
 def score_quad_matches(fidx):
     """  Grades quad_match results
     Parameters
@@ -222,3 +223,184 @@ def score_quad_matches(fidx):
             scores.append('Amb')
     # Return
     return scores
+
+
+def triangles(detlines, linelist, npixels, detsrch=5, lstsrch=10, pixtol=1.0):
+    """
+    Parameters
+    ----------
+    detlines : ndarray
+      list of detected lines in pixels (sorted, increasing)
+    linelist : ndarray
+      list of lines that should be detected (sorted, increasing)
+    npixels : float
+      Number of pixels along the dispersion direction
+    detsrch : int
+      Number of consecutive elements in detlines to use to create a pattern (-1 means all lines in detlines)
+    lstsrch : int
+      Number of consecutive elements in linelist to use to create a pattern (-1 means all lines in detlines)
+    pixtol : float
+      tolerance that is used to determine if a match is successful (in units of pixels)
+
+    Returns
+    -------
+    dindex : ndarray
+      Index array of all detlines used in each triangle
+    lindex : ndarray
+      Index array of the assigned line to each index in dindex
+    wvcen : ndarray
+      central wavelength of each triangle
+    disps : ndarray
+      Dispersion of each triangle (angstroms/pixel)
+
+    """
+
+    nptn = 3  # Number of lines used to create a pattern
+
+    sz_d = detlines.size
+    sz_l = linelist.size
+
+    # Count the number of detlines patterns that will be created
+    cntdet = 0
+    dup = 0
+    for d in range(detsrch-nptn+1):
+        dup += d+1
+        if d == detsrch-nptn:
+            cntdet += dup*(sz_d-detsrch+1)
+        else:
+            cntdet += dup
+
+    # Count the number of linelist patterns that will be created
+    cntlst = 0
+    lup = 0
+    for l in range(lstsrch-nptn+1):
+        lup += l+1
+        if l == lstsrch-nptn:
+            cntlst += lup*(sz_l-lstsrch+1)
+        else:
+            cntlst += lup
+
+    lindex = np.zeros((cntdet*cntlst, nptn), dtype=np.int)
+    dindex = np.zeros((cntdet*cntlst, nptn), dtype=np.int)
+    wvcen = np.zeros((cntdet*cntlst), dtype=np.float)
+    disps = np.zeros((cntdet*cntlst), dtype=np.float)
+
+    # Test each detlines combination
+    cntdet = 0
+    for d in range(0, sz_d-nptn+1):
+        dup = d + detsrch
+        if dup > sz_d:
+            dup = sz_d
+        if detsrch == -1:
+            dup = sz_d
+        for dd in range(d+nptn-1, dup):
+            for xd in range(d+1, dd):
+                # Create the test pattern
+                dval = (detlines[xd]-detlines[d])/(detlines[dd]-detlines[d])
+                tol = pixtol/(detlines[dd]-detlines[d])
+                # Search through all possible patterns in the linelist
+                for l in range(0, sz_l-nptn+1):
+                    lup = l + lstsrch
+                    if lup > sz_l:
+                        lup = sz_l
+                    if lstsrch == -1:
+                        lup = sz_l
+                    for ll in range(l+nptn-1, lup):
+                        for xl in range(l+1, ll):
+                            lval = (linelist[xl]-linelist[l])/(linelist[ll]-linelist[l])
+                            tst = lval-dval
+                            if tst < 0.0:
+                                tst *= -1.0
+                            if tst <= tol:
+                                lindex[cntdet, 0] = l
+                                lindex[cntdet, 1] = xl
+                                lindex[cntdet, 2] = ll
+                                dindex[cntdet, 0] = d
+                                dindex[cntdet, 1] = xd
+                                dindex[cntdet, 2] = dd
+                                tst = (linelist[ll]-linelist[l]) / (detlines[dd]-detlines[d])
+                                wvcen[cntdet] = (npixels/2.0) * tst + (linelist[ll]-tst*detlines[dd])
+                                disps[cntdet] = tst
+                            cntdet += 1
+    return dindex, lindex, wvcen, disps
+
+
+def solve_triangles(detlines, linelist, dindex, lindex, best_dict=None):
+    """  Given a starting solution, find the best match for all detlines
+
+    Parameters
+    ----------
+    detlines : ndarray
+      list of detected lines in pixels (sorted, increasing)
+    linelist : ndarray
+      list of lines that should be detected (sorted, increasing)
+    dindex : ndarray
+      Index array of all detlines used in each triangle
+    lindex : ndarray
+      Index array of the assigned line to each index in dindex
+    best_dict : dict
+      Contains all relevant details of the fit
+
+    Returns
+    -------
+
+    """
+    nlines = detlines.size
+    if best_dict is None:
+        best_dict = dict(nmatch=0, ibest=-1, bwv=0.)
+
+    # Find the best ID of each line
+    detids = np.zeros(nlines)
+    scores = ['None' for xx in range(nlines)]
+    mask = np.zeros(nlines, dtype=np.bool)
+    ngd_match = 0
+    for dd in range(nlines):
+        ww = np.where(dindex == dd)
+        if ww[0].size == 0:
+            continue
+        unq, cnts = np.unique(lindex[ww], return_counts=True)
+        detids[dd] = linelist[unq[np.argmax(cnts)]]
+        scr = score_triangles(cnts)
+        scores[dd] = scr
+        if scr in ["Perfect", "Very Good", "Good", "OK"]:
+            mask[dd] = True
+            ngd_match += 1
+
+    # Iteratively fit this solution, and ID all lines.
+    if ngd_match > best_dict['nmatch']:
+        best_dict['mask'] = mask
+        best_dict['nmatch'] = ngd_match
+        best_dict['scores'] = scores
+        best_dict['IDs'] = detids
+    return
+
+
+def score_triangles(counts):
+    """  Grades for the triangle results
+    Parameters
+    ----------
+    fidx
+
+    Returns
+    -------
+    scores : list
+
+    """
+    ncnt = counts.size
+    max_counts = np.max(counts)
+    sum_counts = np.sum(counts)
+    # Score
+    if (ncnt == 1) & (max_counts >= 4):
+        score = 'Perfect'
+    elif sum_counts/max_counts >= 0.8:
+        score = 'Very Good'
+    elif sum_counts/max_counts >= 0.65:
+        score = 'Good'
+    elif sum_counts/max_counts >= 0.5:
+        score = 'OK'
+    elif sum_counts/max_counts >= 0.3:
+        score = 'Risky'
+    else:
+        score = 'Ambitious'
+    # Return
+    return score

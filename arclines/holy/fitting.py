@@ -12,7 +12,7 @@ def iterative_fitting(spec, tcent, ifit, IDs, llist, disp, plot_fil=None,
 
     if aparm is None:
         aparm = dict(llist='',
-                    disp=disp,             # Ang/unbinned pixel
+                    disp=disp,           # Ang/unbinned pixel
                     disp_toler=0.1,      # 10% tolerance
                     match_toler=3.,      # Matcing tolerance (pixels)
                     func='legendre',     # Function for fitting
