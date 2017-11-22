@@ -10,7 +10,7 @@ import pdb
 from arclines.holy import grail
 
 
-def tst_holy(spec, lines, idx, npixels=2048, test='semi_brute'):
+def tst_holy(spec, lines, test='semi_brute'):
 
     # Run
     if test == 'semi_brute':
