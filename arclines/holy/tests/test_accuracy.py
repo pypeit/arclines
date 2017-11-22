@@ -16,7 +16,7 @@ def tst_holy(spec, lines, idx, npixels=2048, test='semi_brute'):
     if test == 'semi_brute':
         print("Not implemented yet!")
     elif test == 'general':
-        best_dict, final_fit = grail.general(spec, lines, npix=npixels, isspec=False, islinelist=True)
+        best_dict, final_fit = grail.general(spec, lines, islinelist=True)
     else:
         pdb.set_trace()
 
@@ -100,6 +100,16 @@ def gen_fakedata(wavecen, disp, nonlinear, ndet=25, nlines=100, nspurious=5, rms
     return detlines[srt], linelist, idxlines[srt]
 
 
+def gen_spectrum(lines, npixels=2048):
+    xspec = np.arange(npixels, dtype=np.float)
+    yspec = np.zeros(npixels, dtype=np.float)
+    ampl = np.random.uniform(0.0, 20000.0, lines.size)
+    sigma = 1.0  # pixels
+    for i in range(lines.size):
+        yspec += ampl[i] * np.exp(-(xspec-lines[i])**2/(2.0*sigma)**2)
+    return np.random.normal(yspec, np.sqrt(yspec+100.0))
+
+
 def main(flg_tst, nsample=1000):
 
     if flg_tst in [1]:
@@ -115,14 +125,14 @@ def main(flg_tst, nsample=1000):
     for i in range(nsample):
         # Generate a new set of fake data
         detlines, linelist, idxlines = gen_fakedata(wavecen, disp, nonlinear, npixels=npixels)
-        spec = GENERATE SPECTRUM USING DETLINES
+        spec = gen_spectrum(detlines, npixels=npixels)
         grade, best_dict, final_fit = tst_holy(spec, linelist, idxlines, npixels=npixels, test=test)
         sv_grade.append(grade)
 
     # Report it
     print('==============================================================')
-    for name, grade in zip(names,sv_grade):
-        print("{:s} {:s}".format(name,grade))
+    for grade in sv_grade:
+        print("{:s}".format(grade))
 
 
 # Test
