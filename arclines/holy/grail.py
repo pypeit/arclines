@@ -314,10 +314,7 @@ def general(spec, lines, siglev=20., min_ampl=300., islinelist=False,
     from arclines import plots as arcl_plots
 
     # Import the triangles algorithm
-    try:
-        from arclines.holy.cypatterns import triangles
-    except ImportError:
-        from arclines.holy.patterns import triangles
+    from arclines.holy.patterns import triangles
 
     if islinelist:
         line_lists = lines
