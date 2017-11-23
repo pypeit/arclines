@@ -43,14 +43,14 @@ def tst_holy(spec, lines, solution, test='general', tol=0.1):
     if test == 'semi_brute':
         print("Not implemented yet!")
     elif test == 'general':
-        best_dict, final_fit = grail.general(spec, lines, islinelist=True)
+        best_dict, final_fit = grail.general(spec, lines, islinelist=True, outroot="test")
     else:
         pdb.set_trace()
 
     # Generate the estimated solution
     xsol = np.linspace(0.0, 1.0, spec.size)
     ysol = arutils.func_val(final_fit['fitc'], xsol, final_fit['function'],
-                             minv=final_fit['fmin'], maxv=final_fit['fmax'])
+                            minv=final_fit['fmin'], maxv=final_fit['fmax'])
     ysolp = arutils.func_val(final_fit['fitc'], xsol+tol/spec.size, final_fit['function'],
                              minv=final_fit['fmin'], maxv=final_fit['fmax'])
     ysolm = arutils.func_val(final_fit['fitc'], xsol-tol/spec.size, final_fit['function'],
@@ -179,7 +179,7 @@ def main(flg_tst, nsample=1000):
         print("Test not implemented")
         pdb.set_trace()
 
-    wavecen, disp, nonlinear = 5000.0, 1.0, 0.02
+    wavecen, disp, nonlinear = 5000.0, 1.0, 0.01
     npixels = 2048
 
     # Run it
