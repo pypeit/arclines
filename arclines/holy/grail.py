@@ -404,6 +404,13 @@ def general(spec, lines, siglev=20., min_ampl=300., islinelist=False,
             best_dict['unknown'] = unknown
             best_dict['ampl'] = unknown
 
+    if best_dict['nmatch'] == 0:
+        print('---------------------------------------------------')
+        print('Report:')
+        print('::   No matches! Try another algorithm')
+        print('---------------------------------------------------')
+        return
+
     # Try to pick up some extras by turning off/on unknowns
     if best_dict['unknown']:
         tot_list = line_lists
@@ -413,13 +420,6 @@ def general(spec, lines, siglev=20., min_ampl=300., islinelist=False,
     # Retrieve the wavelengths of the linelist and sort
     wvdata = np.array(tot_list['wave'].data)  # Removes mask if any
     wvdata.sort()
-
-    if best_dict['nmatch'] == 0:
-        print('---------------------------------------------------')
-        print('Report:')
-        print('::   No matches! Try another algorithm')
-        print('---------------------------------------------------')
-        return
 
     # Report
     print('---------------------------------------------------')

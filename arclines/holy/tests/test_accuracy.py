@@ -11,7 +11,32 @@ from arclines.holy import grail
 from astropy.table import Table
 
 
-def tst_holy(spec, lines, solution, test='general', tol=0.01):
+def tst_holy(spec, lines, solution, test='general', tol=0.1):
+    """
+    Run a test with a wavelength calibration algorithm
+
+    Parameters
+    ----------
+    spec : ndarray
+      Fake Spectrum
+    lines : Table
+      Astropy table containing the fake linelist
+    solution : ndarray
+      The true wavelength solution of every pixel
+    test : str
+      Which calibration algorithm should be tested
+    tol : float
+      maximum allowed pixel deviation of the wavelength solution
+
+    Returns
+    -------
+    grade : bool
+      PASS or FAIL
+    best_dict : dict
+      Initial ID solution
+    final_fit : dict
+      Final fit solution
+    """
     from pypit import arutils
 
     # Run
@@ -23,24 +48,34 @@ def tst_holy(spec, lines, solution, test='general', tol=0.01):
         pdb.set_trace()
 
     # Generate the estimated solution
-    xsol = np.linspace(-1.0, 1.0, spec.size)
+    xsol = np.linspace(0.0, 1.0, spec.size)
     ysol = arutils.func_val(final_fit['fitc'], xsol, final_fit['function'],
-                            minv=final_fit['fmin'], maxv=final_fit['fmax'])
+                             minv=final_fit['fmin'], maxv=final_fit['fmax'])
+    ysolp = arutils.func_val(final_fit['fitc'], xsol+tol/spec.size, final_fit['function'],
+                             minv=final_fit['fmin'], maxv=final_fit['fmax'])
+    ysolm = arutils.func_val(final_fit['fitc'], xsol-tol/spec.size, final_fit['function'],
+                             minv=final_fit['fmin'], maxv=final_fit['fmax'])
 
     # Compare this with the true solution and ensure that the
     # maximum deviation is less than the allowed tolerance
-    MAKE THIS A PIXEL DEVIATION BY MULTIPLYING BY THE DERIVATIVE?
-    max_diff = np.max(np.abs((ysol-solution)/solution))
-    if max_diff < tol:
-        grade = 'PASSED'
+    if ysolp[0] > ysolm[0]:
+        passed = np.all((ysolm < solution) & (ysolp > solution))
     else:
-        grade = 'FAILED'
+        passed = np.all((ysolp < solution) & (ysolm > solution))
+
+    if not passed:
+        from matplotlib import pyplot as plt
+        plt.plot(xsol, (solution-ysol)/ysol, 'r-')
+        plt.plot(xsol, (ysolp-ysol)/ysol, 'g-')
+        plt.plot(xsol, (ysolm-ysol)/ysol, 'b-')
+        plt.show()
+        pdb.set_trace()
 
     # Return the result
-    return grade, best_dict, final_fit
+    return passed, best_dict, final_fit
 
 
-def gen_fakedata(wavecen, disp, nonlinear, ndet=25, nlines=100, nspurious=5, rms=0.1, npixels=2048):
+def gen_fakedata(wavecen, disp, nonlinear, ndet=40, nlines=100, nspurious=5, rms=0.1, npixels=2048):
     """
     Generate a fake linelist and fake data.
 
@@ -105,12 +140,12 @@ def gen_fakedata(wavecen, disp, nonlinear, ndet=25, nlines=100, nspurious=5, rms
     detlines += np.random.normal(0.0, rms, detlines.size)
 
     # Plot the solution?
-    plotsol = True
+    plotsol = False
     if plotsol:
         from matplotlib import pyplot as plt
         plt.plot(detlines[:ndet], linelist[idxlines[:ndet]], 'bx')
         plt.show()
-    return detlines[srt], linelist, idxlines[srt], solution
+    return detlines[srt], linelist, idxlines[srt], solution, sign
 
 
 def gen_linelist(lines):
@@ -148,19 +183,20 @@ def main(flg_tst, nsample=1000):
     npixels = 2048
 
     # Run it
-    sv_grade = []  # for the end, just in case
+    sv_grade = np.zeros(nsample, dtype=np.bool)  # for the end, just in case
     for i in range(nsample):
         # Generate a new set of fake data
-        detlines, linelist, idxlines, solution = gen_fakedata(wavecen, disp, nonlinear, npixels=npixels)
+        detlines, linelist, idxlines, solution, sign = gen_fakedata(wavecen, disp, nonlinear, npixels=npixels)
         spec = gen_spectrum(detlines, npixels=npixels)
         lltable = gen_linelist(linelist)
-        grade, best_dict, final_fit = tst_holy(spec, lltable, solution, test=test, tol=0.01)
-        sv_grade.append(grade)
+        passed, best_dict, final_fit = tst_holy(spec, lltable, solution, test=test, tol=1.0)
+        sv_grade[i] = passed
+        if not passed:
+            print(sign)
 
-    # Report it
+    # Report results
     print('==============================================================')
-    for grade in sv_grade:
-        print("{:s}".format(grade))
+    print(np.sum(sv_grade), "/", nsample)
 
 
 # Test
