@@ -226,7 +226,7 @@ def score_quad_matches(fidx):
     return scores
 
 
-@nb.jit(nopython=True)
+@nb.jit(nopython=True, cache=True)
 def triangles(detlines, linelist, npixels, detsrch=5, lstsrch=10, pixtol=1.0):
     """
     Parameters
