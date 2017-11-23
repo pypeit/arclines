@@ -4,6 +4,7 @@ from __future__ import (print_function, absolute_import, division, unicode_liter
 
 
 import numpy as np
+import numba as nb
 import pdb
 
 
@@ -225,6 +226,7 @@ def score_quad_matches(fidx):
     return scores
 
 
+@nb.jit(nopython=True)
 def triangles(detlines, linelist, npixels, detsrch=5, lstsrch=10, pixtol=1.0):
     """
     Parameters
@@ -280,10 +282,10 @@ def triangles(detlines, linelist, npixels, detsrch=5, lstsrch=10, pixtol=1.0):
         else:
             cntlst += lup
 
-    lindex = np.zeros((cntdet*cntlst, nptn), dtype=np.int)
-    dindex = np.zeros((cntdet*cntlst, nptn), dtype=np.int)
-    wvcen = np.zeros((cntdet*cntlst), dtype=np.float)
-    disps = np.zeros((cntdet*cntlst), dtype=np.float)
+    lindex = np.zeros((cntdet*cntlst, nptn), dtype=nb.types.uint64)
+    dindex = np.zeros((cntdet*cntlst, nptn), dtype=nb.types.uint64)
+    wvcen = np.zeros((cntdet*cntlst))
+    disps = np.zeros((cntdet*cntlst))
 
     # Test each detlines combination
     cntdet = 0
