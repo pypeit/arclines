@@ -8,9 +8,10 @@ import warnings
 import pdb
 
 from arclines.holy import grail
+from astropy.table import Table
 
 
-def tst_holy(spec, lines, test='semi_brute'):
+def tst_holy(spec, lines, idxlines, test='general'):
 
     # Run
     if test == 'semi_brute':
@@ -97,16 +98,34 @@ def gen_fakedata(wavecen, disp, nonlinear, ndet=25, nlines=100, nspurious=5, rms
     idxlines = np.append(np.searchsorted(linelist, truwaves), np.zeros(nspurious, dtype=np.int))
     srt = np.argsort(detlines)
     detlines += np.random.normal(0.0, rms, detlines.size)
+
+    # Plot the solution?
+    plotsol = True
+    if plotsol:
+        from matplotlib import pyplot as plt
+        plt.plot(detlines[:ndet], linelist[idxlines[:ndet]], 'bx')
+        plt.show()
     return detlines[srt], linelist, idxlines[srt]
 
 
-def gen_spectrum(lines, npixels=2048):
+def gen_linelist(lines):
+    linetable = Table()
+    linetable['ion'] = ['FAKELINE']*lines.size
+    linetable['wave'] = lines
+    linetable['NIST'] = [1]*lines.size
+    linetable['Instr'] = [1]*lines.size
+    linetable['amplitude'] = [1.0]*lines.size
+    linetable['Source'] = ['FAKELINE']*lines.size
+    return linetable
+
+
+def gen_spectrum(detlines, npixels=2048):
     xspec = np.arange(npixels, dtype=np.float)
     yspec = np.zeros(npixels, dtype=np.float)
-    ampl = np.random.uniform(0.0, 20000.0, lines.size)
+    ampl = np.random.uniform(0.0, 20000.0, detlines.size)
     sigma = 1.0  # pixels
-    for i in range(lines.size):
-        yspec += ampl[i] * np.exp(-(xspec-lines[i])**2/(2.0*sigma)**2)
+    for i in range(detlines.size):
+        yspec += ampl[i] * np.exp(-(xspec-detlines[i])**2/(2.0*sigma)**2)
     return np.random.normal(yspec, np.sqrt(yspec+100.0))
 
 
@@ -116,8 +135,11 @@ def main(flg_tst, nsample=1000):
         test = 'semi_brute'
     elif flg_tst in [2]:
         test = 'general'
+    else:
+        print("Test not implemented")
+        pdb.set_trace()
 
-    wavecen, disp, nonlinear = 5000.0, 1.0, 0.1
+    wavecen, disp, nonlinear = 5000.0, 1.0, 0.02
     npixels = 2048
 
     # Run it
@@ -126,7 +148,8 @@ def main(flg_tst, nsample=1000):
         # Generate a new set of fake data
         detlines, linelist, idxlines = gen_fakedata(wavecen, disp, nonlinear, npixels=npixels)
         spec = gen_spectrum(detlines, npixels=npixels)
-        grade, best_dict, final_fit = tst_holy(spec, linelist, idxlines, npixels=npixels, test=test)
+        lltable = gen_linelist(linelist)
+        grade, best_dict, final_fit = tst_holy(spec, lltable, idxlines, test=test)
         sv_grade.append(grade)
 
     # Report it

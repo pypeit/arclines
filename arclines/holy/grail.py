@@ -320,8 +320,8 @@ def general(spec, lines, siglev=20., min_ampl=300., islinelist=False,
         from arclines.holy.patterns import triangles
 
     if islinelist:
-        line_lists = lines.copy()
-        unknwns = np.array([])
+        line_lists = lines
+        unknwns = lines[:0].copy()
     else:
         # Load line lists
         line_lists = arcl_io.load_line_lists(lines)
