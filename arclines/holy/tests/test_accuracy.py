@@ -11,7 +11,8 @@ from arclines.holy import grail
 from astropy.table import Table
 
 
-def tst_holy(spec, lines, idxlines, test='general'):
+def tst_holy(spec, lines, solution, test='general', tol=0.01):
+    from pypit import arutils
 
     # Run
     if test == 'semi_brute':
@@ -21,21 +22,21 @@ def tst_holy(spec, lines, idxlines, test='general'):
     else:
         pdb.set_trace()
 
-    pdb.set_trace()
+    # Generate the estimated solution
+    xsol = np.linspace(-1.0, 1.0, spec.size)
+    ysol = arutils.func_val(final_fit['fitc'], xsol, final_fit['function'],
+                            minv=final_fit['fmin'], maxv=final_fit['fmax'])
 
-    # Score
-    grade = 'PASSED'
-    if final_fit['rms'] > score['rms']:
+    # Compare this with the true solution and ensure that the
+    # maximum deviation is less than the allowed tolerance
+    MAKE THIS A PIXEL DEVIATION BY MULTIPLYING BY THE DERIVATIVE?
+    max_diff = np.max(np.abs((ysol-solution)/solution))
+    if max_diff < tol:
+        grade = 'PASSED'
+    else:
         grade = 'FAILED'
-        warnings.warn("Solution for {:s} failed RMS!!".format(name))
-    if len(final_fit['xfit']) < score['nxfit']:
-        grade = 'FAILED'
-        warnings.warn("Solution for {:s} failed N xfit!!".format(name))
-    if best_dict['nmatch'] < score['nmatch']:
-        grade = 'FAILED'
-        warnings.warn("Solution for {:s} failed N match!!".format(name))
 
-    # Warn
+    # Return the result
     return grade, best_dict, final_fit
 
 
@@ -68,8 +69,10 @@ def gen_fakedata(wavecen, disp, nonlinear, ndet=25, nlines=100, nspurious=5, rms
       Fake data (including spurious)
     linelist : ndarray
       Fake linelist (including spurious)
-    detidx : ndarray
+    idxlines : ndarray
       mask containing 0's (spurious) or the index in the linelist of each detection
+    solution : ndarray
+      The correct wavelength of every pixel
     """
 
     # Randomly choose whether pixels correlate or anticorrelate with wavelength
@@ -81,6 +84,7 @@ def gen_fakedata(wavecen, disp, nonlinear, ndet=25, nlines=100, nspurious=5, rms
     # Generate random pixels on a detector
     pixlist = np.random.uniform(-1.0, 1.0, ndet)
     pixspur = np.random.uniform(-1.0, 1.0, nspurious)
+    pixsoln = np.linspace(-1.0, 1.0, npixels)
 
     # Perturb the linear values onto a non-linear solution
     nlncoeff = np.array([np.random.uniform(-nonlinear, +nonlinear), 0.0, 1.0])
@@ -89,6 +93,7 @@ def gen_fakedata(wavecen, disp, nonlinear, ndet=25, nlines=100, nspurious=5, rms
     waves = np.polyval(wavcoeff, pixlist) * np.polyval(nlncoeff, pixlist)
     linelist = np.append(waves, np.random.uniform(3000.0, 10000.0, nlines))
     linelist.sort()
+    solution = np.polyval(wavcoeff, pixsoln) * np.polyval(nlncoeff, pixsoln)
 
     # Get true list
     truwaves = np.polyval(wavcoeff, pixlist) * np.polyval(nlncoeff, pixlist)
@@ -105,7 +110,7 @@ def gen_fakedata(wavecen, disp, nonlinear, ndet=25, nlines=100, nspurious=5, rms
         from matplotlib import pyplot as plt
         plt.plot(detlines[:ndet], linelist[idxlines[:ndet]], 'bx')
         plt.show()
-    return detlines[srt], linelist, idxlines[srt]
+    return detlines[srt], linelist, idxlines[srt], solution
 
 
 def gen_linelist(lines):
@@ -146,10 +151,10 @@ def main(flg_tst, nsample=1000):
     sv_grade = []  # for the end, just in case
     for i in range(nsample):
         # Generate a new set of fake data
-        detlines, linelist, idxlines = gen_fakedata(wavecen, disp, nonlinear, npixels=npixels)
+        detlines, linelist, idxlines, solution = gen_fakedata(wavecen, disp, nonlinear, npixels=npixels)
         spec = gen_spectrum(detlines, npixels=npixels)
         lltable = gen_linelist(linelist)
-        grade, best_dict, final_fit = tst_holy(spec, lltable, idxlines, test=test)
+        grade, best_dict, final_fit = tst_holy(spec, lltable, solution, test=test, tol=0.01)
         sv_grade.append(grade)
 
     # Report it
