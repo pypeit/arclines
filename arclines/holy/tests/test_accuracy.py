@@ -122,7 +122,12 @@ def gen_fakedata(wavecen, disp, nonlinear, ndet=40, nlines=100, nspurious=5, rms
     pixsoln = np.linspace(-1.0, 1.0, npixels)
 
     # Perturb the linear values onto a non-linear solution
-    nlncoeff = np.array([np.random.uniform(-nonlinear, +nonlinear), 0.0, 1.0])
+    npert = 4
+    while True:
+        nlcff = np.random.uniform(-nonlinear, +nonlinear, npert-2)
+        nlncoeff = np.append(nlcff, np.array([0.0, 1.0]))
+        if np.all(np.abs(np.polyval(nlncoeff, pixsoln)-1.0) < nonlinear):
+            break
 
     # Determine their wavelengths
     waves = np.polyval(wavcoeff, pixlist) * np.polyval(nlncoeff, pixlist)
@@ -179,6 +184,8 @@ def main(flg_tst, nsample=1000):
         print("Test not implemented")
         pdb.set_trace()
 
+    # Note, in most cases, the deviation from linear is < 0.5% (i.e. nonlinear = 0.005)
+    # so a one per cent deviation from linear (i.e. nonlinear = 0.01) is very reasonable.
     wavecen, disp, nonlinear = 5000.0, 1.0, 0.01
     npixels = 2048
 
