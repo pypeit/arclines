@@ -79,6 +79,14 @@ def iterative_fitting(spec, tcent, ifit, IDs, llist, disp, plot_fil=None,
     fmin, fmax = 0., 1.
     xfit, yfit = tcent[ifit]/(npix-1), all_ids[ifit]
     mask, fit = arutils.robust_polyfit(xfit, yfit, n_order, function=aparm['func'], sigma=aparm['nsig_rej_final'], minv=fmin, maxv=fmax)#, debug=True)
+
+    if False:
+        # For testing
+        print("\n*******\nTemporary - remove this code\n*******\n")
+        txfit = xfit[mask==0]
+        tyfit = yfit[mask==0]
+        fit = arutils.func_fit(txfit, tyfit, aparm['func'], 1, minv=fmin, maxv=fmax)
+
     irej = np.where(mask==1)[0]
     if len(irej) > 0:
         xrej = xfit[irej]
