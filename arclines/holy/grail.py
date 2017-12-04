@@ -328,78 +328,84 @@ def general(spec, lines, siglev=20., min_ampl=300., islinelist=False,
 
     # Lines
     all_tcent, cut_tcent, icut = arch_utils.arc_lines_from_spec(spec, min_ampl=min_ampl)
-    use_tcent = all_tcent.copy()
 
     # Best
     best_dict = dict(nmatch=0, ibest=-1, bwv=0., min_ampl=min_ampl)
 
     ngrid = 1000
 
-    # Loop on unknowns
-    for unknown in [False, True]:
-        if unknown:
-            tot_list = vstack([line_lists, unknwns])
+    # Loop on sign (i.e. if pixels correlate/anticorrelate wavelength)
+    for sign in [+1.0, -1.0]:
+        if sign == +1.0:
+            use_tcent = all_tcent.copy()
         else:
-            tot_list = line_lists
-        wvdata = np.array(tot_list['wave'].data)  # Removes mask if any
-        wvdata.sort()
+            use_tcent = (npix - 1.0) - all_tcent.copy()[::-1]
+        # Loop on unknowns
+        for unknown in [False, True]:
+            if unknown:
+                tot_list = vstack([line_lists, unknwns])
+            else:
+                tot_list = line_lists
+            wvdata = np.array(tot_list['wave'].data)  # Removes mask if any
+            wvdata.sort()
 
-        sav_nmatch = best_dict['nmatch']
+            sav_nmatch = best_dict['nmatch']
 
-        # Loop on pix_tol
-        for pix_tol in [1.]:#, 2.]:
-            # Triangle pattern matching
-            dindex, lindex, wvcen, disps = triangles(use_tcent, wvdata, npix, 5, 10, pix_tol)
+            # Loop on pix_tol
+            for pix_tol in [1.]:#, 2.]:
+                # Triangle pattern matching
+                dindex, lindex, wvcen, disps = triangles(use_tcent, wvdata, npix, 5, 10, pix_tol)
 
-            # Remove any invalid results
-            ww = np.where((wvcen > 0.0) & (disps > 0.0))
-            dindex = dindex[ww[0], :]
-            lindex = lindex[ww[0], :]
-            disps = disps[ww]
-            wvcen = wvcen[ww]
+                # Remove any invalid results
+                ww = np.where((wvcen > 0.0) & (disps > 0.0))
+                dindex = dindex[ww[0], :]
+                lindex = lindex[ww[0], :]
+                disps = disps[ww]
+                wvcen = wvcen[ww]
 
-            # Setup the grids and histogram
-            binw = np.linspace(max(np.min(wvcen), np.min(wvdata)), min(np.max(wvcen), np.max(wvdata)), ngrid)
-            bind = np.linspace(np.min(np.log10(disps)), np.max(np.log10(disps)), ngrid)
-            histimg, xed, yed = np.histogram2d(wvcen, np.log10(disps), bins=[binw, bind])
-            histimg = gaussian_filter(histimg, 3)
+                # Setup the grids and histogram
+                binw = np.linspace(max(np.min(wvcen), np.min(wvdata)), min(np.max(wvcen), np.max(wvdata)), ngrid)
+                bind = np.linspace(np.min(np.log10(disps)), np.max(np.log10(disps)), ngrid)
+                histimg, xed, yed = np.histogram2d(wvcen, np.log10(disps), bins=[binw, bind])
+                histimg = gaussian_filter(histimg, 3)
 
-            # Find the best combination of central wavelength and dispersion
-            bidx = np.unravel_index(np.argmax(histimg), histimg.shape)
+                # Find the best combination of central wavelength and dispersion
+                bidx = np.unravel_index(np.argmax(histimg), histimg.shape)
 
-            debug = False
-            if debug:
-                from matplotlib import pyplot as plt
-                plt.clf()
-                plt.imshow(histimg[:, ::-1].T, extent=[binw[0], binw[-1], bind[0], bind[-1]], aspect='auto')
-                plt.axvline(binw[bidx[0]], color='r', linestyle='--')
-                plt.axhline(bind[bidx[1]], color='r', linestyle='--')
-                plt.show()
-                print(histimg[bidx], binw[bidx[0]], 10.0**bind[bidx[1]])
-                pdb.set_trace()
+                debug = False
+                if debug:
+                    from matplotlib import pyplot as plt
+                    plt.clf()
+                    plt.imshow(histimg[:, ::-1].T, extent=[binw[0], binw[-1], bind[0], bind[-1]], aspect='auto')
+                    plt.axvline(binw[bidx[0]], color='r', linestyle='--')
+                    plt.axhline(bind[bidx[1]], color='r', linestyle='--')
+                    plt.show()
+                    print(histimg[bidx], binw[bidx[0]], 10.0**bind[bidx[1]])
+                    pdb.set_trace()
 
-            # Find all good solutions
-            nsel = 5  # Select all solutions around the best solution within a square of side 2*nsel
-            wlo = binw[bidx[0] - nsel]
-            whi = binw[bidx[0] + nsel]
-            dlo = 10.0 ** bind[bidx[1] - 5*nsel]
-            dhi = 10.0 ** bind[bidx[1] + 5*nsel]
-            wgd = np.where((wvcen > wlo) & (wvcen < whi) & (disps > dlo) & (disps < dhi))
-            dindex = dindex[wgd[0], :].flatten()
-            lindex = lindex[wgd[0], :].flatten()
+                # Find all good solutions
+                nsel = 5  # Select all solutions around the best solution within a square of side 2*nsel
+                wlo = binw[bidx[0] - nsel]
+                whi = binw[bidx[0] + nsel]
+                dlo = 10.0 ** bind[bidx[1] - 5*nsel]
+                dhi = 10.0 ** bind[bidx[1] + 5*nsel]
+                wgd = np.where((wvcen > wlo) & (wvcen < whi) & (disps > dlo) & (disps < dhi))
+                dindex = dindex[wgd[0], :].flatten()
+                lindex = lindex[wgd[0], :].flatten()
 
-            # Given this solution, fit for all detlines
-            arch_patt.solve_triangles(use_tcent, wvdata, dindex, lindex, best_dict)
+                # Given this solution, fit for all detlines
+                arch_patt.solve_triangles(use_tcent, wvdata, dindex, lindex, best_dict)
+                if best_dict['nmatch'] > sav_nmatch:
+                    best_dict['pix_tol'] = pix_tol
+
+            # Save linelist?
             if best_dict['nmatch'] > sav_nmatch:
-                best_dict['pix_tol'] = pix_tol
-
-        # Save linelist?
-        if best_dict['nmatch'] > sav_nmatch:
-            best_dict['bwv'] = binw[bidx[0]]
-            best_dict['bdisp'] = 10.0**bind[bidx[1]]
-            best_dict['line_list'] = tot_list.copy()
-            best_dict['unknown'] = unknown
-            best_dict['ampl'] = unknown
+                best_dict['bwv'] = binw[bidx[0]]
+                best_dict['bdisp'] = 10.0**bind[bidx[1]]
+                best_dict['line_list'] = tot_list.copy()
+                best_dict['unknown'] = unknown
+                best_dict['sign'] = sign
+                best_dict['ampl'] = unknown
 
     if best_dict['nmatch'] == 0:
         print('---------------------------------------------------')
@@ -418,6 +424,14 @@ def general(spec, lines, siglev=20., min_ampl=300., islinelist=False,
     wvdata = np.array(tot_list['wave'].data)  # Removes mask if any
     wvdata.sort()
 
+    # Get the best sign
+    if best_dict['sign'] == +1.0:
+        use_tcent = all_tcent.copy()
+        signtxt = "correlate"
+    else:
+        use_tcent = (npix - 1.0) - all_tcent.copy()[::-1]
+        signtxt = "anticorrelate"
+
     # Report
     print('---------------------------------------------------')
     print('Report:')
@@ -428,6 +442,7 @@ def general(spec, lines, siglev=20., min_ampl=300., islinelist=False,
     print('::   Best dispersion              = {:g}A/pix'.format(best_dict['bdisp']))
     print('::   Best solution used pix_tol   = {}'.format(best_dict['pix_tol']))
     print('::   Best solution had unknown    = {}'.format(best_dict['unknown']))
+    print('::   Pixels {} with wavelength'.format(signtxt))
     print('---------------------------------------------------')
 
     # Write IDs
@@ -465,10 +480,14 @@ def general(spec, lines, siglev=20., min_ampl=300., islinelist=False,
         use_weak_tcent = all_tcent.copy()
         add_weak = []
         for weak in use_weak_tcent:
-            if np.min(np.abs(use_tcent-weak)) > 5.:
+            if np.min(np.abs(all_tcent-weak)) > 5.:
                 add_weak += [weak]
         if len(add_weak) > 0:
-            use_tcent = np.concatenate([use_tcent, np.array(add_weak)])
+            if best_dict['sign'] == +1.0:
+                use_weak = np.array(add_weak)
+            else:
+                use_weak = (npix - 1.0) - np.array(add_weak)[::-1]
+            use_tcent = np.concatenate([use_tcent, use_weak])
         # Fit
         final_fit = arch_fit.iterative_fitting(spec, use_tcent, ifit,
                                                np.array(best_dict['IDs'])[ifit], line_lists[NIST_lines],
