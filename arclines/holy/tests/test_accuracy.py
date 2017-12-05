@@ -191,7 +191,7 @@ def main(flg_tst, nsample=1000):
 
     # Note, in most cases, the deviation from linear is < 0.5% (i.e. nonlinear = 0.005)
     # so a one per cent deviation from linear (i.e. nonlinear = 0.01) is very reasonable.
-    wavecen, disp, nonlinear = 5000.0, 1.0, 0.01
+    wavecen, disp, nonlinear = 6000.0, 1.0, 0.01
     # wavecen, disp, nonlinear = 5000.0, 1.0, 0.005
     npixels = 2048
     pixtol = 1.0  # Allowed tolerance in pixels
@@ -199,8 +199,11 @@ def main(flg_tst, nsample=1000):
     # Run it
     sv_grade = np.zeros(nsample, dtype=np.bool)  # for the end, just in case
     for i in range(nsample):
+        # Perturb the input values by a random amount
+        pt_wavecen = wavecen * np.random.uniform(0.8, 1.2)
+        pt_disp = disp * np.random.uniform(0.8, 1.2)
         # Generate a new set of fake data
-        detlines, linelist, idxlines, solution, sign = gen_fakedata(wavecen, disp, nonlinear, npixels=npixels)
+        detlines, linelist, idxlines, solution, sign = gen_fakedata(pt_wavecen, pt_disp, nonlinear, npixels=npixels)
         spec = gen_spectrum(detlines, npixels=npixels)
         lltable = gen_linelist(linelist)
         passed, best_dict, final_fit = tst_holy(spec, lltable, solution, test=test, tol=pixtol)
