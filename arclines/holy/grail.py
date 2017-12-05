@@ -385,10 +385,10 @@ def general(spec, lines, siglev=20., min_ampl=300., islinelist=False,
 
                 # Find all good solutions
                 nsel = 5  # Select all solutions around the best solution within a square of side 2*nsel
-                wlo = binw[bidx[0] - nsel]
-                whi = binw[bidx[0] + nsel]
-                dlo = 10.0 ** bind[bidx[1] - 5*nsel]
-                dhi = 10.0 ** bind[bidx[1] + 5*nsel]
+                wlo = binw[max(0, bidx[0] - nsel)]
+                whi = binw[min(ngrid-1, bidx[0] + nsel)]
+                dlo = 10.0 ** bind[max(0, bidx[1] - 5*nsel)]
+                dhi = 10.0 ** bind[min(ngrid-1, bidx[1] + 5*nsel)]
                 wgd = np.where((wvcen > wlo) & (wvcen < whi) & (disps > dlo) & (disps < dhi))
                 dindex = dindex[wgd[0], :].flatten()
                 lindex = lindex[wgd[0], :].flatten()
