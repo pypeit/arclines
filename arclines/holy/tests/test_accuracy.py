@@ -58,6 +58,11 @@ def tst_holy(spec, lines, solution, test='general', tol=0.1):
 
     # Compare this with the true solution and ensure that the
     # maximum deviation is less than the allowed tolerance
+
+    # Correct the solution if pixels anticorrelate with wavelength
+    if best_dict["sign"] == -1.0:
+        solution = solution[::-1]
+
     if ysolp[0] > ysolm[0]:
         passed = np.all((ysolm < solution) & (ysolp > solution))
     else:
@@ -122,7 +127,7 @@ def gen_fakedata(wavecen, disp, nonlinear, ndet=40, nlines=100, nspurious=5, rms
     pixsoln = np.linspace(-1.0, 1.0, npixels)
 
     # Perturb the linear values onto a non-linear solution
-    npert = 4
+    npert = 3
     while True:
         nlcff = np.random.uniform(-nonlinear, +nonlinear, npert-2)
         nlncoeff = np.append(nlcff, np.array([0.0, 1.0]))
@@ -187,7 +192,9 @@ def main(flg_tst, nsample=1000):
     # Note, in most cases, the deviation from linear is < 0.5% (i.e. nonlinear = 0.005)
     # so a one per cent deviation from linear (i.e. nonlinear = 0.01) is very reasonable.
     wavecen, disp, nonlinear = 5000.0, 1.0, 0.01
+    # wavecen, disp, nonlinear = 5000.0, 1.0, 0.005
     npixels = 2048
+    pixtol = 1.0  # Allowed tolerance in pixels
 
     # Run it
     sv_grade = np.zeros(nsample, dtype=np.bool)  # for the end, just in case
@@ -196,10 +203,8 @@ def main(flg_tst, nsample=1000):
         detlines, linelist, idxlines, solution, sign = gen_fakedata(wavecen, disp, nonlinear, npixels=npixels)
         spec = gen_spectrum(detlines, npixels=npixels)
         lltable = gen_linelist(linelist)
-        passed, best_dict, final_fit = tst_holy(spec, lltable, solution, test=test, tol=1.0)
+        passed, best_dict, final_fit = tst_holy(spec, lltable, solution, test=test, tol=pixtol)
         sv_grade[i] = passed
-        if not passed:
-            print(sign)
 
     # Report results
     print('==============================================================')
