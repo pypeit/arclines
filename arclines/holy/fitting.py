@@ -16,7 +16,7 @@ def iterative_fitting(spec, tcent, ifit, IDs, llist, disp, plot_fil=None,
                     disp_toler=0.1,      # 10% tolerance
                     match_toler=3.,      # Matcing tolerance (pixels)
                     func='legendre',     # Function for fitting
-                    n_first=3,           # Order of polynomial for first fit
+                    n_first=2,           # Order of polynomial for first fit
                     n_final=4,           # Order of polynomial for final fit
                     nsig_rej=2.,         # Number of sigma for rejection
                     nsig_rej_final=3.0)  # Number of sigma for rejection (final fit)
@@ -85,6 +85,7 @@ def iterative_fitting(spec, tcent, ifit, IDs, llist, disp, plot_fil=None,
         print("\n*******\nTemporary - remove this code\n*******\n")
         txfit = xfit[mask==0]
         tyfit = yfit[mask==0]
+        print(fit.size)
         fit = arutils.func_fit(txfit, tyfit, aparm['func'], 1, minv=fmin, maxv=fmax)
 
     irej = np.where(mask==1)[0]

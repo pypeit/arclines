@@ -178,7 +178,7 @@ def match_qa(arc_spec, tcent, line_list, IDs, scores, outfile, title=None, path=
             clr = clrs[score]
         except KeyError:
             clr = 'gray'
-        yline = np.max(arc_spec[int(x)-2:int(x)+2])
+        yline = np.max(arc_spec[max(0, int(x)-2):min(arc_spec.size-1, int(x)+2)])
         mn_yline = min(mn_yline, yline)
         # Tick mark
         ax_spec.plot([x,x], [yline+ysep*0.25, yline+ysep], '-', color=clr)
