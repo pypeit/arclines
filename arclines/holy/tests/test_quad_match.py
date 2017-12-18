@@ -7,7 +7,7 @@ import os
 import h5py
 import pdb
 
-from arclines import io as arcl_io
+from arclines import arcio as arcl_io
 from arclines.holy import patterns as arch_patt
 
 

@@ -46,7 +46,7 @@ def main(pargs=None):
 
     from linetools import utils as ltu
 
-    from arclines import io as arcl_io
+    from arclines import arcio as arcl_io
     from arclines.holy import utils as arch_utils
     from arclines.holy.grail import semi_brute
     from arclines.holy import patterns as arch_patt

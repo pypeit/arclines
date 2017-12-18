@@ -10,7 +10,7 @@ from collections import OrderedDict
 
 from astropy.table import Table, vstack
 
-from arclines import io as arcl_io
+from arclines import arcio as arcl_io
 from arclines import utils as arcl_utils
 from arclines import load_source
 from arclines import defs

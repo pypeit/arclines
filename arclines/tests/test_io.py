@@ -8,7 +8,7 @@ import pytest
 from astropy.table import Table
 
 import arclines
-from arclines import io as arcl_io
+from arclines import arcio as arcl_io
 
 
 #def data_path(filename):

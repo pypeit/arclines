@@ -60,7 +60,7 @@ def vette_unkwn_against_lists(U_lines, uions, tol_NIST=0.2, NIST_only=False,
       str array
 
     """
-    from arclines import io as arcl_io
+    from arclines import arcio as arcl_io
 
     mask = np.ones(len(U_lines)).astype(int)
     wv_match = np.array(['XXI   12233.2312']*len(U_lines))

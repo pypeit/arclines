@@ -43,7 +43,7 @@ def main(args=None):
 
     import numpy as np
     from arclines import build_lists
-    from arclines import io as arcl_io
+    from arclines import arcio as arcl_io
     from arclines import load_source
     from arclines import plots as arcl_plots
     from arclines import utils as arcl_utils

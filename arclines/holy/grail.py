@@ -6,7 +6,7 @@ from scipy.ndimage.filters import gaussian_filter
 import numpy as np
 import pdb
 
-from arclines import io as arcl_io
+from arclines import arcio as arcl_io
 from arclines.holy import patterns as arch_patt
 from arclines.holy import fitting as arch_fit
 from arclines.holy import utils as arch_utils
