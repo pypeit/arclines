@@ -14,6 +14,7 @@ except NameError:
 
 import arclines  # for path
 line_path = arclines.__path__[0] + '/data/lists/'
+src_path  = arclines.__path__[0] + '/data/sources/'
 nist_path = arclines.__path__[0] + '/data/NIST/'
 
 
@@ -53,10 +54,6 @@ def main(args=None):
     import numpy as np
     from arclines import build_lists
     from arclines import arcio as arcl_io
-    from arclines import load_source
-    from arclines import plots as arcl_plots
-    from arclines import utils as arcl_utils
-
 
     print("=============================================================")
     print("This script is for EXPERTS ONLY")
@@ -67,19 +64,28 @@ def main(args=None):
     if not pargs.skip_stop:
         pdb.set_trace()
 
-    # Load sources
-    sources = arcl_io.load_source_table()
-
-
-
-
-
-
     # Load the NIST ThAr list
     llist = arcl_io.load_line_lists(["ThAr"], NIST=True)
+    llist['Ion'] = llist['Spectrum']
+    # ['Spectrum', 'wave', 'Aki', 'Rel.', 'Ion', 'NIST']
     pdb.set_trace()
 
+    # Generate a new linelist
     linelist = build_lists.init_line_list()
+
+    # Add all lines, and flag if they meet the quality described by
+    # Murphy et al. (2007), MNRAS, 378, 221
+    # http://www.astronomy.swin.edu.au/~mmurphy/thar/thar.html
+    vwn = np.loadtxt(src_path+"ThAr_Murphy2007.dat", unpack=True, usecols=(0,))
+    vwv = 1.0E8 / vwn  # Convert vacuum wavenumber (in cm^-1) to vacuum wavelength (in Angstroms)
+
+
+
+    # Append the new Table
+    linelist = np.vstack([linelist, newlines])
+
+    # Finally, sort the list by increasing wavelength
+    linelist.sort('wave')
 
     # Delete this, it's just for reference
     # idict = OrderedDict()
@@ -89,12 +95,6 @@ def main(args=None):
     # idict['Instr'] = 0  # Flag for instrument
     # idict['amplitude'] = 0
     # idict['Source'] = dummy_src
-
-    # Add all lines, and flag if they meet the quality described by
-    # Murphy et al. (2007), MNRAS, 378, 221
-    # http://www.astronomy.swin.edu.au/~mmurphy/thar/thar.html
-
-
 
     # Write?
     if not pargs.write:
