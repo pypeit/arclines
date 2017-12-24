@@ -4,6 +4,8 @@ Generate a ThAr linelist based on the NIST data and Michael Murphy's list.
 """
 from __future__ import (print_function, absolute_import, division, unicode_literals)
 
+from collections import OrderedDict
+from astropy.table import Table, vstack
 import pdb
 
 try:  # Python 3
@@ -62,39 +64,44 @@ def main(args=None):
     print("p.s.  You need to remove the files you wish to re-build")
     print("=============================================================")
     if not pargs.skip_stop:
-        pdb.set_trace()
+        pass
+        #pdb.set_trace()
 
     # Load the NIST ThAr list
     llist = arcl_io.load_line_lists(["ThAr"], NIST=True)
     llist['Ion'] = llist['Spectrum']
     # ['Spectrum', 'wave', 'Aki', 'Rel.', 'Ion', 'NIST']
-    pdb.set_trace()
 
-    # Generate a new linelist
+    # Generate a table
     linelist = build_lists.init_line_list()
 
-    # Add all lines, and flag if they meet the quality described by
+    # now add all NIST lines
+    nlines = llist['Ion'].size
+    for ll in range(nlines):
+        linelist.add_row([llist['Ion'][ll], llist['wave'][ll], 1, 0, llist['Rel.'][ll], 'NIST'])
+        if ll%1000 == 0:
+            print(ll, '/', nlines)
+    # Remove the first dummy row
+    linelist.remove_row(0)
+
+    # Check that all lines in the following list are included. If not, add them.
     # Murphy et al. (2007), MNRAS, 378, 221
     # http://www.astronomy.swin.edu.au/~mmurphy/thar/thar.html
     vwn = np.loadtxt(src_path+"ThAr_Murphy2007.dat", unpack=True, usecols=(0,))
+    elm, ion = np.loadtxt(src_path+"ThAr_Murphy2007.dat", unpack=True, dtype='|S4', usecols=(3, 4))
+    elm = np.core.defchararray.add(elm, np.array([' ']*elm.size))
+    elmion = np.core.defchararray.add(elm, ion)
+    wxx = np.where(elmion == 'XX 0')
+    elmion[wxx] = 'UNKNWN'
+
     vwv = 1.0E8 / vwn  # Convert vacuum wavenumber (in cm^-1) to vacuum wavelength (in Angstroms)
 
-
-
+    t1 = Table({'ion': [1, 2], 'b': [3, 4]}, names=('a', 'b'))
     # Append the new Table
-    linelist = np.vstack([linelist, newlines])
+    linelist = vstack([linelist, newlines])
 
     # Finally, sort the list by increasing wavelength
     linelist.sort('wave')
-
-    # Delete this, it's just for reference
-    # idict = OrderedDict()
-    # idict['ion'] = dummy_line
-    # idict['wave'] = 0.
-    # idict['NIST'] = 0
-    # idict['Instr'] = 0  # Flag for instrument
-    # idict['amplitude'] = 0
-    # idict['Source'] = dummy_src
 
     # Write?
     if not pargs.write:
