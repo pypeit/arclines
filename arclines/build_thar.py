@@ -118,9 +118,21 @@ def main(args=None):
     # Now include all Murphy lines, which are not in NIST
     wm = np.where(flagnist == 0)[0]
     if wm.size != 0:
-        print("{0:d} lines not in Murphy list, but not in NIST".format(wm.size))
+        print("{0:d} lines in Murphy list, but not in NIST".format(wm.size))
+        newid = 0
         for ll in range(wm.size):
-            linelist.add_row([elmion[wm[ll]], vwv[wm[ll]], 0, 0, 1.0, 'MURPHY'])  # Relative Intensity is just a dummy number here
+            wn = np.where((np.abs(vwv[wm[ll]] - llist['wave']) < toler))
+            if wn[0].size == 1:
+                # A line marked 'unknown' in the Murphy list now has an ID
+                # Don't add it in here, it should already be included
+                print("New ID for line", llist['Ion'][wn[0][0]], llist['wave'][wn[0][0]])
+                newid += 1
+            elif wn[0].size == 0:
+                # No match in the NIST list
+                linelist.add_row([elmion[wm[ll]], vwv[wm[ll]], 0, 0, 1.0, 'MURPHY'])
+            else:
+                print("WARNING :: multiple lines matched.")
+        print("{0:d} new IDs".format(newid))
 
     # Finally, sort the list by increasing wavelength
     linelist.sort('wave')
