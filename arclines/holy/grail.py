@@ -321,8 +321,13 @@ def general(spec, lines, siglev=20., min_ampl=300., islinelist=False,
         unknwns = lines[:0].copy()
     else:
         # Load line lists
-        line_lists = arcl_io.load_line_lists(lines)
-        unknwns = arcl_io.load_unknown_list(lines)
+        if 'ThAr' in lines:
+            line_lists_all = arcl_io.load_line_lists(lines)
+            line_lists = line_lists_all[np.where(line_lists_all['ion'] != 'UNKNWN')]
+            unknwns = line_lists_all[np.where(line_lists_all['ion'] == 'UNKNWN')]
+        else:
+            line_lists = arcl_io.load_line_lists(lines)
+            unknwns = arcl_io.load_unknown_list(lines)
 
     npix = spec.size
 
@@ -355,7 +360,6 @@ def general(spec, lines, siglev=20., min_ampl=300., islinelist=False,
             for pix_tol in [1.]:#, 2.]:
                 # Triangle pattern matching
                 dindex, lindex, wvcen, disps = triangles(use_tcent, wvdata, npix, 5, 10, pix_tol)
-
                 # Remove any invalid results
                 ww = np.where((wvcen > 0.0) & (disps > 0.0))
                 dindex = dindex[ww[0], :]
