@@ -103,9 +103,19 @@ def main(args=None):
                 print("Possibly a duplicate NIST entry?", llist['Ion'][ll], llist['wave'][ll])
                 print("Ignoring this line\n---")
                 continue
+            # Check if a line is very close to another in the list
+            if np.any(np.abs(llist['wave'][ll]-linelist['wave']) < toler):
+                print("A duplicate NIST entry was found", llist['Ion'][ll], llist['wave'][ll])
+                print("Ignoring this line\n---")
+                continue
             linelist.add_row([llist['Ion'][ll], llist['wave'][ll], 1, 0, llist['Rel.'][ll], 'NIST+MURPHY'])
             flagnist[wm[0][0]] = 1
         elif wm[0].size == 0:
+            # Check if a line is very close to another in the list
+            if np.any(np.abs(llist['wave'][ll]-linelist['wave']) < toler):
+                print("A duplicate NIST entry was found", llist['Ion'][ll], llist['wave'][ll])
+                print("Ignoring this line\n---")
+                continue
             linelist.add_row([llist['Ion'][ll], llist['wave'][ll], 1, 0, llist['Rel.'][ll], 'NIST'])
         else:
             print("ERROR :: too many lines match. Reduce tolerance")

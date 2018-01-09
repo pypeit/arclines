@@ -6,8 +6,6 @@ from __future__ import (print_function, absolute_import, division, unicode_liter
 import glob
 import astropy.io.fits as pyfits
 import numpy as np
-import json
-import h5py
 import warnings
 import pdb
 
@@ -67,12 +65,12 @@ def main(flg_tst):
     pixid = []
     if True:
         # Test all HIREDUX solutions
-        files = glob.glob(test_arc_path + "HIREDUX/*aspec.fits")
+        files = glob.glob(test_arc_path + "HIREDUX/*aspec.fits.gz")
         for fn in files:
             names += [fn.split("/")[-1]]
             filename = pyfits.open(fn)
             fx = filename[0].data
-            ids = pyfits.open(fn.replace("aspec.fits", "lines.fits"))
+            ids = pyfits.open(fn.replace("aspec.fits.gz", "lines.fits.gz"))
             pxs = ids[1].data["PIX"]
             wvs = ids[1].data["WV"]
             ordspec, ordwavs, ordpixs = [], [], []
@@ -96,6 +94,7 @@ def main(flg_tst):
             if grade == 'PASSED':
                 grades[ord] = 1
         sv_grade.append(grades.copy())
+        pdb.set_trace()
 
     # Report it
     print('==============================================================')
