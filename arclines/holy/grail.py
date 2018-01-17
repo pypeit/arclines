@@ -337,70 +337,96 @@ def general(spec, lines, siglev=20., min_ampl=300., islinelist=False,
     # Best
     best_dict = dict(nmatch=0, ibest=-1, bwv=0., min_ampl=min_ampl)
 
-    ngrid = 1000
+    ngridw = 100000
+    ngridd = 100
 
-    # Loop on sign (i.e. if pixels correlate/anticorrelate wavelength)
-    for sign in [+1.0, -1.0]:
-        if sign == +1.0:
-            use_tcent = all_tcent.copy()
+    # Loop on unknowns
+    for unknown in [False, True]:
+        if unknown:
+            tot_list = vstack([line_lists, unknwns])
         else:
+            tot_list = line_lists
+        wvdata = np.array(tot_list['wave'].data)  # Removes mask if any
+        wvdata.sort()
+
+        sav_nmatch = best_dict['nmatch']
+
+        # Loop on pix_tol
+        for pix_tol in [1.0]:#, 2.]:
+            # Loop on sign (i.e. if pixels correlate/anticorrelate wavelength)
+            use_tcent = all_tcent.copy()
+            # Triangle pattern matching
+            dindexp, lindexp, wvcenp, dispsp = triangles(use_tcent, wvdata, npix, 5, 10, pix_tol)
+            # dindexp, lindexp, wvcenp, dispsp = triangles(use_tcent, wvdata, npix, 3, 6, pix_tol)
+            # Remove any invalid results
+            ww = np.where((wvcenp > 0.0) & (dispsp > 0.0))
+            dindexp = dindexp[ww[0], :]
+            lindexp = lindexp[ww[0], :]
+            dispsp = dispsp[ww]
+            wvcenp = wvcenp[ww]
+            # Now do anticorrelate
             use_tcent = (npix - 1.0) - all_tcent.copy()[::-1]
-        # Loop on unknowns
-        for unknown in [False, True]:
-            if unknown:
-                tot_list = vstack([line_lists, unknwns])
+            # Triangle pattern matching
+            dindexm, lindexm, wvcenm, dispsm = triangles(use_tcent, wvdata, npix, 5, 10, pix_tol)
+            #dindexm, lindexm, wvcenm, dispsm = triangles(use_tcent, wvdata, npix, 3, 6, pix_tol)
+            # Remove any invalid results
+            ww = np.where((wvcenm > 0.0) & (dispsm > 0.0))
+            dindexm = dindexm[ww[0], :]
+            lindexm = lindexm[ww[0], :]
+            dispsm = dispsm[ww]
+            wvcenm = wvcenm[ww]
+            # Setup the grids and histogram
+            wmin = max(np.min(wvcenp), np.min(wvcenm), np.min(wvdata))
+            wmax = min(np.max(wvcenp), np.max(wvcenm), np.max(wvdata))
+            dmin = max(np.min(np.log10(dispsp)), np.min(np.log10(dispsm)))
+            dmax = min(np.max(np.log10(dispsp)), np.max(np.log10(dispsm)))
+            binw = np.linspace(wmin, wmax, ngridw)
+            bind = np.linspace(dmin, dmax, ngridd)
+            histimgp, xed, yed = np.histogram2d(wvcenp, np.log10(dispsp), bins=[binw, bind])
+            histimgm, xed, yed = np.histogram2d(wvcenm, np.log10(dispsm), bins=[binw, bind])
+            #histimgp = gaussian_filter(histimgp, 3)
+            #histimgm = gaussian_filter(histimgm, 3)
+            histimg = histimgp - histimgm
+            #histimg = gaussian_filter(histimg, 6)
+            # Find the best combination of central wavelength and dispersion
+            bidx = np.unravel_index(np.argmax(np.abs(histimg)), histimg.shape)
+
+            debug = False
+            if debug:
+                print(histimg[bidx], binw[bidx[0]], 10.0**bind[bidx[1]])
+                from matplotlib import pyplot as plt
+                plt.clf()
+                plt.imshow(np.log10(np.abs(histimg[:, ::-1].T)), extent=[binw[0], binw[-1], bind[0], bind[-1]], aspect='auto')
+                #plt.imshow(histimg[:, ::-1].T, extent=[binw[0], binw[-1], bind[0], bind[-1]], aspect='auto')
+                plt.axvline(binw[bidx[0]], color='r', linestyle='--')
+                plt.axhline(bind[bidx[1]], color='r', linestyle='--')
+                plt.show()
+                pdb.set_trace()
+                plt.imshow(histimgp[:, ::-1].T, extent=[binw[0], binw[-1], bind[0], bind[-1]], aspect='auto')
+
+            # Find all good solutions
+            nsel = 5  # Select all solutions around the best solution within a square of side 2*nsel
+            wlo = binw[max(0, bidx[0] - nsel)]
+            whi = binw[min(ngridw-1, bidx[0] + nsel)]
+            dlo = 10.0 ** bind[max(0, bidx[1] - 5*nsel)]
+            dhi = 10.0 ** bind[min(ngridd-1, bidx[1] + 5*nsel)]
+            if histimgp[bidx] > histimgm[bidx]:
+                wgd = np.where((wvcenp > wlo) & (wvcenp < whi) & (dispsp > dlo) & (dispsp < dhi))
+                dindex = dindexp[wgd[0], :].flatten()
+                lindex = lindexp[wgd[0], :].flatten()
+                use_tcent = all_tcent.copy()
+                sign = +1.0
             else:
-                tot_list = line_lists
-            wvdata = np.array(tot_list['wave'].data)  # Removes mask if any
-            wvdata.sort()
+                wgd = np.where((wvcenm > wlo) & (wvcenm < whi) & (dispsm > dlo) & (dispsm < dhi))
+                dindex = dindexm[wgd[0], :].flatten()
+                lindex = lindexm[wgd[0], :].flatten()
+                use_tcent = (npix - 1.0) - all_tcent.copy()[::-1]
+                sign = -1.0
 
-            sav_nmatch = best_dict['nmatch']
-
-            # Loop on pix_tol
-            for pix_tol in [1.]:#, 2.]:
-                # Triangle pattern matching
-                dindex, lindex, wvcen, disps = triangles(use_tcent, wvdata, npix, 5, 10, pix_tol)
-                # Remove any invalid results
-                ww = np.where((wvcen > 0.0) & (disps > 0.0))
-                dindex = dindex[ww[0], :]
-                lindex = lindex[ww[0], :]
-                disps = disps[ww]
-                wvcen = wvcen[ww]
-
-                # Setup the grids and histogram
-                binw = np.linspace(max(np.min(wvcen), np.min(wvdata)), min(np.max(wvcen), np.max(wvdata)), ngrid)
-                bind = np.linspace(np.min(np.log10(disps)), np.max(np.log10(disps)), ngrid)
-                histimg, xed, yed = np.histogram2d(wvcen, np.log10(disps), bins=[binw, bind])
-                histimg = gaussian_filter(histimg, 3)
-
-                # Find the best combination of central wavelength and dispersion
-                bidx = np.unravel_index(np.argmax(histimg), histimg.shape)
-
-                debug = False
-                if debug:
-                    from matplotlib import pyplot as plt
-                    plt.clf()
-                    plt.imshow(histimg[:, ::-1].T, extent=[binw[0], binw[-1], bind[0], bind[-1]], aspect='auto')
-                    plt.axvline(binw[bidx[0]], color='r', linestyle='--')
-                    plt.axhline(bind[bidx[1]], color='r', linestyle='--')
-                    plt.show()
-                    print(histimg[bidx], binw[bidx[0]], 10.0**bind[bidx[1]])
-                    pdb.set_trace()
-
-                # Find all good solutions
-                nsel = 5  # Select all solutions around the best solution within a square of side 2*nsel
-                wlo = binw[max(0, bidx[0] - nsel)]
-                whi = binw[min(ngrid-1, bidx[0] + nsel)]
-                dlo = 10.0 ** bind[max(0, bidx[1] - 5*nsel)]
-                dhi = 10.0 ** bind[min(ngrid-1, bidx[1] + 5*nsel)]
-                wgd = np.where((wvcen > wlo) & (wvcen < whi) & (disps > dlo) & (disps < dhi))
-                dindex = dindex[wgd[0], :].flatten()
-                lindex = lindex[wgd[0], :].flatten()
-
-                # Given this solution, fit for all detlines
-                arch_patt.solve_triangles(use_tcent, wvdata, dindex, lindex, best_dict)
-                if best_dict['nmatch'] > sav_nmatch:
-                    best_dict['pix_tol'] = pix_tol
+            # Given this solution, fit for all detlines
+            arch_patt.solve_triangles(use_tcent, wvdata, dindex, lindex, best_dict)
+            if best_dict['nmatch'] > sav_nmatch:
+                best_dict['pix_tol'] = pix_tol
 
             # Save linelist?
             if best_dict['nmatch'] > sav_nmatch:
@@ -422,7 +448,7 @@ def general(spec, lines, siglev=20., min_ampl=300., islinelist=False,
     if best_dict['unknown']:
         tot_list = line_lists
     else:
-        tot_list = vstack([line_lists,unknwns])
+        tot_list = vstack([line_lists, unknwns])
 
     # Retrieve the wavelengths of the linelist and sort
     wvdata = np.array(tot_list['wave'].data)  # Removes mask if any

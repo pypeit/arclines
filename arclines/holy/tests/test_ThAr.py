@@ -3,6 +3,7 @@ standard input spectra.  Generate summary output
 """
 from __future__ import (print_function, absolute_import, division, unicode_literals)
 
+import time
 import glob
 import astropy.io.fits as pyfits
 import numpy as np
@@ -31,6 +32,7 @@ def tst_holy(name, spec, wav_id, pix_id, test='semi_brute', toler=0.001):
 
     # Run
     outroot = outdir+name
+    print(wav_id)
     if test == 'general':
         best_dict, final_fit = grail.general(spec, lines, siglev=siglev,
                                              min_ampl=min_ampl, min_nmatch=min_match, outroot=outroot)
@@ -88,13 +90,22 @@ def main(flg_tst):
     # Run it
     sv_grade = []  # for the end, just in case
     for name, spec, wvid, pxid in zip(names, specs, wavid, pixid):
-        grades = np.zeros(len(spec), dtype = np.int)
+        grades = np.zeros(len(spec), dtype=np.int)
+        bwave, bdisp = np.zeros(len(spec)), np.zeros(len(spec))
+        timstart = time.time()
         for ord in range(len(spec)):
             grade, best_dict, final_fit = tst_holy(name, spec[ord], wvid[ord], pxid[ord], test=test)
+            bwave[ord] = best_dict['bwv']
+            bdisp[ord] = best_dict['bdisp']
             if grade == 'PASSED':
                 grades[ord] = 1
+        timfinish = time.time()
         sv_grade.append(grades.copy())
         pdb.set_trace()
+        print("Completion time (minutes):", (timfinish-timstart)/60.0)
+        from matplotlib import pyplot as plt
+        plt.plot(bwave, bdisp, 'bo')
+        plt.show()
 
     # Report it
     print('==============================================================')
