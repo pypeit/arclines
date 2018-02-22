@@ -11,14 +11,14 @@ import pdb
 
 from arclines.holy import grail
 
-#from xastropy.xutils import xdebug as xdb
+from astropy.table import Table
 
 import arclines
 test_arc_path = arclines.__path__[0]+'/data/test_arcs/'
 outdir = 'TEST_SUITE_OUTPUT/'
 
-def tst_holy(name, spec_file, lines, wv_cen, disp, score, fidx, test='semi_brute'):
 
+def tst_holy(name, spec_file, lines, wv_cen, disp, score, fidx, test='semi_brute'):
     # Favored parameters (should match those in the defaults)
     siglev=20.
     min_ampl=1000.
@@ -33,6 +33,9 @@ def tst_holy(name, spec_file, lines, wv_cen, disp, score, fidx, test='semi_brute
     elif exten == 'hdf5':
         hdf = h5py.File(test_arc_path+spec_file,'r')
         spec = hdf['arcs/{:d}/spec'.format(fidx)].value
+    elif exten == 'ascii':
+        tbl = Table.read(test_arc_path+spec_file, format='ascii')
+        spec = tbl['flux'].data
     else:
         pdb.set_trace()
 
@@ -70,14 +73,26 @@ def main(flg_tst):
     elif flg_tst in [2]:
         test = 'general'
 
+    # Init
+    names, src_files, all_lines, all_wvcen, all_disp, fidxs, scores = [], [], [], [], [], [], []
+
+    # NIRSPEC 1
+    names += ['NIRSPEC_1']
+    src_files += ['nirspec1_sky.ascii']
+    all_lines += [['OH']]
+    all_wvcen += [10000.]
+    all_disp += [2.109]
+    fidxs += [0]
+    scores += [dict(rms=0.13, nxfit=13, nmatch=10)]
+
     # LRISb 600/4000 with the longslit
-    names = ['LRISb_600_4000_longslit']
-    src_files = ['lrisb_600_4000_PYPIT.json']
-    all_lines = [['CdI','HgI','ZnI']]
-    all_wvcen = [4400.]
-    all_disp = [1.26]
-    fidxs = [0]
-    scores = [dict(rms=0.13, nxfit=13, nmatch=10)]
+    names += ['LRISb_600_4000_longslit']
+    src_files += ['lrisb_600_4000_PYPIT.json']
+    all_lines += [['CdI','HgI','ZnI']]
+    all_wvcen += [4400.]
+    all_disp += [1.26]
+    fidxs += [0]
+    scores += [dict(rms=0.13, nxfit=13, nmatch=10)]
 
     '''
     # LRISb off-center
@@ -158,7 +173,7 @@ def main(flg_tst):
 
 # Test
 if __name__ == '__main__':
-    #flg_tst = 1   # Run em all with semi-brute
-    flg_tst = 2   # Run em all with general
+    flg_tst = 1   # Run em all with semi-brute
+    #flg_tst = 2   # Run em all with general
 
     main(flg_tst)
