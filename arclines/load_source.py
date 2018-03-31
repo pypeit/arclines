@@ -69,7 +69,6 @@ def load_pypit(version, src_file, ions, plot=False, **kwargs):
       Additional lines
 
     """
-    from pypit import arutils
     # Load
     if version != 1:
         raise IOError("Unimplemented version!")
@@ -93,7 +92,7 @@ def load_pypit(version, src_file, ions, plot=False, **kwargs):
     mn_ID, mx_ID = min(ID_lines['wave']), max(ID_lines['wave'])
     # Unknown
     # Use PYPIT to decode
-    wave = arutils.func_val(pypit_fit['fitc'],
+    wave = arcl_utils.func_val(pypit_fit['fitc'],
                             np.array(pypit_fit['tcent'])/(npix-1),
                             pypit_fit['function'],
                             minv=pypit_fit['fmin'], maxv=pypit_fit['fmax'])
