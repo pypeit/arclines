@@ -3,6 +3,8 @@
 from __future__ import (print_function, absolute_import, division, unicode_literals)
 
 import numpy as np
+from scipy.optimize import curve_fit
+
 import warnings
 import pdb
 
@@ -245,6 +247,29 @@ def func_fit(x, y, func, deg, minv=None, maxv=None, w=None, guesses=None,
             xmin, xmax = minv, maxv
         xv = 2.0 * (x-xmin)/(xmax-xmin) - 1.0
         return np.polynomial.chebyshev.chebfit(xv, y, deg, w=w)
+    elif func in ["gaussian"]:
+        # Guesses
+        if guesses is None:
+            mx, cent, sigma = guess_gauss(x, y)
+        else:
+            if deg == 2:
+                mx, sigma = guesses
+            elif deg == 3:
+                mx, cent, sigma = guesses
+        # Error
+        if w is not None:
+            sig_y = 1./w
+        else:
+            sig_y = None
+        if deg == 2:  # 2 parameter fit
+            popt, pcov = curve_fit(gauss_2deg, x, y, p0=[mx, sigma], sigma=sig_y)
+        elif deg == 3:  # Standard 3 parameters
+            popt, pcov = curve_fit(gauss_3deg, x, y, p0=[mx, cent, sigma],
+                                   sigma=sig_y)
+        else:
+            raise IOError("Not prepared for deg={:d} for Gaussian fit".format(deg))
+        # Return
+        return popt
     else:
         raise IOError("Fitting function '{0:s}' is not implemented yet\n"+"Please choose from 'polynomial', 'legendre', 'chebyshev','bspline'")
 
@@ -290,5 +315,63 @@ def func_val(c, x, func, minv=None, maxv=None):
             xmin, xmax = minv, maxv
         xv = 2.0 * (x-xmin)/(xmax-xmin) - 1.0
         return np.polynomial.chebyshev.chebval(xv, c)
+    elif func == "gaussian":
+        if len(c) == 2:
+            return gauss_2deg(x, c[0], c[1])
+        elif len(c) == 3:
+            return gauss_3deg(x, c[0], c[1], c[2])
+        else:
+            raise IOError("Not ready for this type of gaussian")
     else:
         raise ValueError("Fitting function '{0:s}' is not implemented yet\n"+"Please choose from 'polynomial', 'legendre', 'chebyshev', 'bspline'")
+
+def gauss_2deg(x,ampl,sigm):
+    """  Simple 2 parameter Gaussian (amplitude, sigma)
+    Parameters
+    ----------
+    x
+    ampl
+    sigm
+
+    Returns
+    -------
+    Evaluated Gausssian
+    """
+    return ampl*np.exp(-1.*x**2/2./sigm**2)
+
+
+def gauss_3deg(x,ampl,cent,sigm):
+    """  Simple 3 parameter Gaussian
+    Parameters
+    ----------
+    x
+    ampl
+    cent
+    sigm
+
+    Returns
+    -------
+    Evaluated Gausssian
+    """
+    return ampl*np.exp(-1.*(cent-x)**2/2/sigm**2)
+
+
+def guess_gauss(x,y):
+    """ Guesses Gaussian parameters with basic stats
+
+    Parameters
+    ----------
+    x
+    y
+
+    Returns
+    -------
+
+    """
+    cent = np.sum(y*x)/np.sum(y)
+    sigma = np.sqrt(np.abs(np.sum((x-cent)**2*y)/np.sum(y))) # From scipy doc
+    # Calculate mx from pixels within +/- sigma/2
+    cen_pix = np.where(np.abs(x-cent)<sigma/2)
+    mx = np.median(y[cen_pix])
+    # Return
+    return mx, cent, sigma
