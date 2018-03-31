@@ -10,7 +10,6 @@ from arclines import io as arcl_io
 from arclines.holy import patterns as arch_patt
 from arclines.holy import fitting as arch_fit
 from arclines.holy import utils as arch_utils
-from arclines.pypit_utils import find_peaks
 
 
 def basic(spec, lines, wv_cen, disp, siglev=20., min_ampl=300.,
