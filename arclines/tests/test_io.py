@@ -45,6 +45,6 @@ def test_load_nist():
     # Stack
     line_lists = vstack(lists, join_type='exact')
     # Test
-    for key in ['wave','Aki','Rel.','Ion','NIST']:
+    for key in ['wave','Aki','RelInt','Ion','NIST']:
         assert key in line_lists.keys()
 
