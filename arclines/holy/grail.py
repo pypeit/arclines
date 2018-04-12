@@ -284,7 +284,8 @@ def semi_brute(spec, lines, wv_cen, disp, siglev=20., min_ampl=300.,
 
 def general(spec, lines, siglev=20., min_ampl=300., islinelist=False,
             outroot=None, debug=False, do_fit=True, verbose=False,
-            fit_parm=None, min_nmatch=0, lowest_ampl=200.):
+            fit_parm=None, min_nmatch=0, lowest_ampl=200.,
+            binw=None, bind=None):
     """
     Parameters
     ----------
@@ -301,6 +302,10 @@ def general(spec, lines, siglev=20., min_ampl=300., islinelist=False,
     fit_parm
     min_nmatch
     lowest_ampl
+    binw : array
+      Wavelength bins
+    bind : array
+      Dispersion bins
 
     Returns
     -------
@@ -334,11 +339,26 @@ def general(spec, lines, siglev=20., min_ampl=300., islinelist=False,
     # Lines
     all_tcent, cut_tcent, icut = arch_utils.arc_lines_from_spec(spec, min_ampl=min_ampl)
 
+    if all_tcent.size == 0:
+        print("No lines to identify!")
+        return None, None
+
     # Best
     best_dict = dict(nmatch=0, ibest=-1, bwv=0., min_ampl=min_ampl)
 
-    ngridw = 100000
-    ngridd = 100
+    # Longslit
+    #ngridw, ngridd = 1000, 1000
+
+    # Echelle
+    #ngridw, ngridd = 100000, 100
+    if binw is None:
+        ngridw = 1000
+    else:
+        ngridw = binw.size
+    if binw is None:
+        ngridd = 1000
+    else:
+        ngridd = bind.size
 
     # Loop on unknowns
     for unknown in [False, True]:
@@ -356,7 +376,10 @@ def general(spec, lines, siglev=20., min_ampl=300., islinelist=False,
             # Loop on sign (i.e. if pixels correlate/anticorrelate wavelength)
             use_tcent = all_tcent.copy()
             # Triangle pattern matching
-            dindexp, lindexp, wvcenp, dispsp = triangles(use_tcent, wvdata, npix, 5, 10, pix_tol)
+            try:
+                dindexp, lindexp, wvcenp, dispsp = triangles(use_tcent, wvdata, npix, 5, 10, pix_tol)
+            except:
+                pdb.set_trace()
             # dindexp, lindexp, wvcenp, dispsp = triangles(use_tcent, wvdata, npix, 3, 6, pix_tol)
             # Remove any invalid results
             ww = np.where((wvcenp > 0.0) & (dispsp > 0.0))
@@ -376,12 +399,14 @@ def general(spec, lines, siglev=20., min_ampl=300., islinelist=False,
             dispsm = dispsm[ww]
             wvcenm = wvcenm[ww]
             # Setup the grids and histogram
-            wmin = max(np.min(wvcenp), np.min(wvcenm), np.min(wvdata))
-            wmax = min(np.max(wvcenp), np.max(wvcenm), np.max(wvdata))
-            dmin = max(np.min(np.log10(dispsp)), np.min(np.log10(dispsm)))
-            dmax = min(np.max(np.log10(dispsp)), np.max(np.log10(dispsm)))
-            binw = np.linspace(wmin, wmax, ngridw)
-            bind = np.linspace(dmin, dmax, ngridd)
+            if binw is None:
+                wmin = max(np.min(wvcenp), np.min(wvcenm), np.min(wvdata))
+                wmax = min(np.max(wvcenp), np.max(wvcenm), np.max(wvdata))
+                binw = np.linspace(wmin, wmax, ngridw)
+            if bind is None:
+                dmin = max(np.min(np.log10(dispsp)), np.min(np.log10(dispsm)))
+                dmax = min(np.max(np.log10(dispsp)), np.max(np.log10(dispsm)))
+                bind = np.linspace(dmin, dmax, ngridd)
             histimgp, xed, yed = np.histogram2d(wvcenp, np.log10(dispsp), bins=[binw, bind])
             histimgm, xed, yed = np.histogram2d(wvcenm, np.log10(dispsm), bins=[binw, bind])
             #histimgp = gaussian_filter(histimgp, 3)
@@ -405,11 +430,13 @@ def general(spec, lines, siglev=20., min_ampl=300., islinelist=False,
                 plt.imshow(histimgp[:, ::-1].T, extent=[binw[0], binw[-1], bind[0], bind[-1]], aspect='auto')
 
             # Find all good solutions
-            nsel = 5  # Select all solutions around the best solution within a square of side 2*nsel
-            wlo = binw[max(0, bidx[0] - nsel)]
-            whi = binw[min(ngridw-1, bidx[0] + nsel)]
-            dlo = 10.0 ** bind[max(0, bidx[1] - 5*nsel)]
-            dhi = 10.0 ** bind[min(ngridd-1, bidx[1] + 5*nsel)]
+            # Select all solutions around the best solution within a square of side 2*nsel
+            # nselw, nseld = 5, 25  # Longslit
+            nselw, nseld = 1, 1  # Echelle
+            wlo = binw[max(0, bidx[0] - nselw)]
+            whi = binw[min(ngridw-1, bidx[0] + nselw)]
+            dlo = 10.0 ** bind[max(0, bidx[1] - nseld)]
+            dhi = 10.0 ** bind[min(ngridd-1, bidx[1] + nseld)]
             if histimgp[bidx] > histimgm[bidx]:
                 wgd = np.where((wvcenp > wlo) & (wvcenp < whi) & (dispsp > dlo) & (dispsp < dhi))
                 dindex = dindexp[wgd[0], :].flatten()
@@ -436,6 +463,7 @@ def general(spec, lines, siglev=20., min_ampl=300., islinelist=False,
                 best_dict['unknown'] = unknown
                 best_dict['sign'] = sign
                 best_dict['ampl'] = unknown
+                best_dict['histimg'] = histimg.copy()
 
     if best_dict['nmatch'] == 0:
         print('---------------------------------------------------')

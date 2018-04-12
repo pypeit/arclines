@@ -32,10 +32,12 @@ def tst_holy(name, spec, wav_id, pix_id, test='semi_brute', toler=0.001):
 
     # Run
     outroot = outdir+name
-    print(wav_id)
+    #print(wav_id)
     if test == 'general':
         best_dict, final_fit = grail.general(spec, lines, siglev=siglev,
                                              min_ampl=min_ampl, min_nmatch=min_match, outroot=outroot)
+        if best_dict is None:
+            return "FAILED", None, None
     else:
         pdb.set_trace()
 
@@ -94,7 +96,11 @@ def main(flg_tst):
         bwave, bdisp = np.zeros(len(spec)), np.zeros(len(spec))
         timstart = time.time()
         for ord in range(len(spec)):
+            print("Analyzing order {0:d}/{1:d}".format(ord, fx.shape[0]))
             grade, best_dict, final_fit = tst_holy(name, spec[ord], wvid[ord], pxid[ord], test=test)
+            if best_dict is None:
+                grades = grades[:ord-1]
+                break
             bwave[ord] = best_dict['bwv']
             bdisp[ord] = best_dict['bdisp']
             if grade == 'PASSED':
