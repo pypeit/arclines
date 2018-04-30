@@ -38,9 +38,13 @@ def tst_holy(name, spec_file, lines, wv_cen, disp, score, fidx, test='semi_brute
 
     # Run
     outroot = outdir+name
+    if spec_file == 'lrisr_600_7500_PYPIT.json':
+        debug=True
+    else:
+        debug=False
     if test == 'semi_brute':
-        best_dict, final_fit = grail.semi_brute(spec, lines, wv_cen, disp, siglev=siglev,
-                             min_ampl=min_ampl, min_nmatch=10, outroot=outroot)
+        best_dict, final_fit = grail.semi_brute(spec, lines, wv_cen, disp, debug=debug,
+                             min_ampl=min_ampl, min_nmatch=min_match, outroot=outroot)
     elif test == 'general':
         best_dict, final_fit = grail.general(spec, lines, siglev=siglev,
                                                 min_ampl=min_ampl, min_nmatch=10, outroot=outroot)
@@ -158,7 +162,7 @@ def main(flg_tst):
 
 # Test
 if __name__ == '__main__':
-    #flg_tst = 1   # Run em all with semi-brute
-    flg_tst = 2   # Run em all with general
+    flg_tst = 1   # Run em all with semi-brute
+    #flg_tst = 2   # Run em all with general
 
     main(flg_tst)
