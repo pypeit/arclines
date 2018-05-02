@@ -3,6 +3,9 @@
 from __future__ import (print_function, absolute_import, division, unicode_literals)
 
 import numpy as np
+from scipy.optimize import curve_fit
+
+import warnings
 import pdb
 
 
@@ -102,3 +105,273 @@ def vette_unkwn_against_lists(U_lines, uions, tol_NIST=0.2, NIST_only=False,
                 print("  ---- Will not add it")
     return mask, wv_match
 
+
+def robust_polyfit(xarray, yarray, order, weights=None, maxone=True, sigma=3.0,
+                   function="polynomial", initialmask=None, forceimask=False,
+                   minv=None, maxv=None, guesses=None, **kwargs):
+    """ Taken from PYPIT
+    A robust (equally weighted) polynomial fit is performed to the xarray, yarray pairs
+    mask[i] = 1 are masked values
+
+    :param xarray: independent variable values
+    :param yarray: dependent variable values
+    :param order: the order of the polynomial to be used in the fitting
+    :param weights: weights to be used in the fitting (weights = 1/sigma)
+    :param maxone: If True, only the most deviant point in a given iteration will be removed
+    :param sigma: confidence interval for rejection
+    :param function: which function should be used in the fitting (valid inputs: 'polynomial', 'legendre', 'chebyshev', 'bspline')
+    :param initialmask: a mask can be supplied as input, these values will be masked for the first iteration. 1 = value masked
+    :param forceimask: if True, the initialmask will be forced for all iterations
+    :param minv: minimum value in the array (or the left limit for a legendre/chebyshev polynomial)
+    :param maxv: maximum value in the array (or the right limit for a legendre/chebyshev polynomial)
+    :return: mask, ct -- mask is an array of the masked values, ct is the coefficients of the robust polyfit.
+    """
+    # Setup the initial mask
+    if initialmask is None:
+        mask = np.zeros(xarray.size, dtype=np.int)
+        if forceimask:
+            warnings.warn("Initial mask cannot be enforced -- no initital mask supplied")
+            forceimask = False
+    else:
+        mask = initialmask.copy()
+    mskcnt = np.sum(mask)
+    # Iterate, and mask out new values on each iteration
+    ct = guesses
+    while True:
+        w = np.where(mask == 0)
+        xfit = xarray[w]
+        yfit = yarray[w]
+        if weights is not None:
+            wfit = weights[w]
+        else:
+            wfit = None
+        ct = func_fit(xfit, yfit, function, order, w=wfit,
+                      guesses=ct, minv=minv, maxv=maxv, **kwargs)
+        yrng = func_val(ct, xarray, function, minv=minv, maxv=maxv)
+        sigmed = 1.4826*np.median(np.abs(yfit-yrng[w]))
+        if xarray.size-np.sum(mask) <= order+2:
+            warnings.warn("More parameters than data points - fit might be undesirable")
+            break  # More data was masked than allowed by order
+        if maxone:  # Only remove the most deviant point
+            tst = np.abs(yarray[w]-yrng[w])
+            m = np.argmax(tst)
+            if tst[m] > sigma*sigmed:
+                mask[w[0][m]] = 1
+        else:
+            if forceimask:
+                w = np.where((np.abs(yarray-yrng) > sigma*sigmed) | (initialmask==1))
+            else:
+                w = np.where(np.abs(yarray-yrng) > sigma*sigmed)
+            mask[w] = 1
+        if mskcnt == np.sum(mask): break  # No new values have been included in the mask
+        mskcnt = np.sum(mask)
+    # Final fit
+    w = np.where(mask == 0)
+    xfit = xarray[w]
+    yfit = yarray[w]
+    if weights is not None:
+        wfit = weights[w]
+    else:
+        wfit = None
+    ct = func_fit(xfit, yfit, function, order, w=wfit, minv=minv, maxv=maxv, **kwargs)
+    return mask, ct
+
+
+def calc_fit_rms(xfit, yfit, fit, func, minv=None, maxv=None):
+    """ Simple RMS calculation
+
+    Parameters
+    ----------
+    xfit : ndarray
+    yfit : ndarray
+    fit : coefficients
+    func : str
+    minv : float, optional
+    maxv : float, optional
+
+    Returns
+    -------
+    rms : float
+
+    """
+    values = func_val(fit, xfit, func, minv=minv, maxv=maxv)
+    rms = np.std(yfit-values)
+    # Return
+    return rms
+
+
+def func_fit(x, y, func, deg, minv=None, maxv=None, w=None, guesses=None,
+             **kwargs):
+    """ General routine to fit a function to a given set of x,y points
+
+    Parameters
+    ----------
+    x : ndarray
+    y : ndarray
+    func : str
+      polynomial, legendre, chebyshev, bspline, gaussian
+    deg : int
+      degree of the fit
+    minv : float, optional
+    maxv
+    w
+    guesses : tuple
+    kwargs
+
+    Returns
+    -------
+    coeff : ndarray or tuple
+      ndarray for standard function fits
+      tuple for bspline
+
+    """
+    if func == "polynomial":
+        return np.polynomial.polynomial.polyfit(x, y, deg, w=w)
+    elif func == "legendre":
+        if minv is None or maxv is None:
+            if np.size(x) == 1:
+                xmin, xmax = -1.0, 1.0
+            else:
+                xmin, xmax = np.min(x), np.max(x)
+        else:
+            xmin, xmax = minv, maxv
+        xv = 2.0 * (x-xmin)/(xmax-xmin) - 1.0
+        return np.polynomial.legendre.legfit(xv, y, deg, w=w)
+    elif func == "chebyshev":
+        if minv is None or maxv is None:
+            if np.size(x) == 1:
+                xmin, xmax = -1.0, 1.0
+            else:
+                xmin, xmax = np.min(x), np.max(x)
+        else:
+            xmin, xmax = minv, maxv
+        xv = 2.0 * (x-xmin)/(xmax-xmin) - 1.0
+        return np.polynomial.chebyshev.chebfit(xv, y, deg, w=w)
+    elif func in ["gaussian"]:
+        # Guesses
+        if guesses is None:
+            mx, cent, sigma = guess_gauss(x, y)
+        else:
+            if deg == 2:
+                mx, sigma = guesses
+            elif deg == 3:
+                mx, cent, sigma = guesses
+        # Error
+        if w is not None:
+            sig_y = 1./w
+        else:
+            sig_y = None
+        if deg == 2:  # 2 parameter fit
+            popt, pcov = curve_fit(gauss_2deg, x, y, p0=[mx, sigma], sigma=sig_y)
+        elif deg == 3:  # Standard 3 parameters
+            popt, pcov = curve_fit(gauss_3deg, x, y, p0=[mx, cent, sigma],
+                                   sigma=sig_y)
+        else:
+            raise IOError("Not prepared for deg={:d} for Gaussian fit".format(deg))
+        # Return
+        return popt
+    else:
+        raise IOError("Fitting function '{0:s}' is not implemented yet\n"+"Please choose from 'polynomial', 'legendre', 'chebyshev','bspline'")
+
+
+def func_val(c, x, func, minv=None, maxv=None):
+    """ Generic routine to return an evaluated function
+    Functional forms include:
+      polynomial, legendre, chebyshev, bspline, gauss
+
+    Parameters
+    ----------
+    c : ndarray
+      coefficients
+    x
+    func
+    minv
+    maxv
+
+    Returns
+    -------
+    values : ndarray
+
+    """
+    if func == "polynomial":
+        return np.polynomial.polynomial.polyval(x, c)
+    elif func == "legendre":
+        if minv is None or maxv is None:
+            if np.size(x) == 1:
+                xmin, xmax = -1.0, 1.0
+            else:
+                xmin, xmax = np.min(x), np.max(x)
+        else:
+            xmin, xmax = minv, maxv
+        xv = 2.0 * (x-xmin)/(xmax-xmin) - 1.0
+        return np.polynomial.legendre.legval(xv, c)
+    elif func == "chebyshev":
+        if minv is None or maxv is None:
+            if np.size(x) == 1:
+                xmin, xmax = -1.0, 1.0
+            else:
+                xmin, xmax = np.min(x), np.max(x)
+        else:
+            xmin, xmax = minv, maxv
+        xv = 2.0 * (x-xmin)/(xmax-xmin) - 1.0
+        return np.polynomial.chebyshev.chebval(xv, c)
+    elif func == "gaussian":
+        if len(c) == 2:
+            return gauss_2deg(x, c[0], c[1])
+        elif len(c) == 3:
+            return gauss_3deg(x, c[0], c[1], c[2])
+        else:
+            raise IOError("Not ready for this type of gaussian")
+    else:
+        raise ValueError("Fitting function '{0:s}' is not implemented yet\n"+"Please choose from 'polynomial', 'legendre', 'chebyshev', 'bspline'")
+
+def gauss_2deg(x,ampl,sigm):
+    """  Simple 2 parameter Gaussian (amplitude, sigma)
+    Parameters
+    ----------
+    x
+    ampl
+    sigm
+
+    Returns
+    -------
+    Evaluated Gausssian
+    """
+    return ampl*np.exp(-1.*x**2/2./sigm**2)
+
+
+def gauss_3deg(x,ampl,cent,sigm):
+    """  Simple 3 parameter Gaussian
+    Parameters
+    ----------
+    x
+    ampl
+    cent
+    sigm
+
+    Returns
+    -------
+    Evaluated Gausssian
+    """
+    return ampl*np.exp(-1.*(cent-x)**2/2/sigm**2)
+
+
+def guess_gauss(x,y):
+    """ Guesses Gaussian parameters with basic stats
+
+    Parameters
+    ----------
+    x
+    y
+
+    Returns
+    -------
+
+    """
+    cent = np.sum(y*x)/np.sum(y)
+    sigma = np.sqrt(np.abs(np.sum((x-cent)**2*y)/np.sum(y))) # From scipy doc
+    # Calculate mx from pixels within +/- sigma/2
+    cen_pix = np.where(np.abs(x-cent)<sigma/2)
+    mx = np.median(y[cen_pix])
+    # Return
+    return mx, cent, sigma
