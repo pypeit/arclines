@@ -9,15 +9,16 @@ import h5py
 import warnings
 import pdb
 
+from pkg_resources import resource_filename
+
 from arclines.holy import grail
 
 #from xastropy.xutils import xdebug as xdb
 
-import arclines
-test_arc_path = arclines.__path__[0]+'/data/test_arcs/'
+test_arc_path = resource_filename('arclines','/data/test_arcs/')
 outdir = 'TEST_SUITE_OUTPUT/'
 
-def tst_holy(name, spec_file, lines, wv_cen, disp, score, fidx, test='semi_brute'):
+def tst_holy(name, spec_file, lines, wv_cen, disp, score, fidx, test='semi_brute', debug=False):
 
     # Favored parameters (should match those in the defaults)
     siglev=20.
@@ -29,6 +30,10 @@ def tst_holy(name, spec_file, lines, wv_cen, disp, score, fidx, test='semi_brute
     if exten == 'json':
         with open(test_arc_path+spec_file,'r') as f:
             pypit_fit = json.load(f)
+        # Allow for new PYPIT output
+        if '0' in pypit_fit.keys():
+            pypit_fit = pypit_fit['0']
+        # Continue
         spec = np.array(pypit_fit['spec'])
     elif exten == 'hdf5':
         hdf = h5py.File(test_arc_path+spec_file,'r')
@@ -38,16 +43,14 @@ def tst_holy(name, spec_file, lines, wv_cen, disp, score, fidx, test='semi_brute
 
     # Run
     outroot = outdir+name
-    if spec_file == 'lrisr_600_7500_PYPIT.json':
-        debug=True
-    else:
-        debug=False
+    #if spec_file == 'deimos_830G_r_PYPIT.json':
+    #    debug=True
     if test == 'semi_brute':
         best_dict, final_fit = grail.semi_brute(spec, lines, wv_cen, disp, debug=debug,
                              min_ampl=min_ampl, min_nmatch=min_match, outroot=outroot)
     elif test == 'general':
-        best_dict, final_fit = grail.general(spec, lines, siglev=siglev,
-                                                min_ampl=min_ampl, min_nmatch=10, outroot=outroot)
+        best_dict, final_fit = grail.general(spec, lines, debug=debug,
+                                                min_ampl=min_ampl, outroot=outroot)
     else:
         pdb.set_trace()
 
@@ -82,6 +85,15 @@ def main(flg_tst):
     all_disp = [1.26]
     fidxs = [0]
     scores = [dict(rms=0.13, nxfit=13, nmatch=10)]
+
+    # DEIMOS 830G grating (red)
+    names += ['DEIMOS_830g_red']
+    src_files += ['deimos_830G_r_PYPIT.json']
+    all_lines += [['ArI','NeI','KrI','XeI']]
+    all_wvcen += [9300.]
+    all_disp += [0.467]
+    fidxs += [0]
+    scores += [dict(rms=0.05, nxfit=12, nmatch=15)]
 
     '''
     # LRISb off-center
@@ -122,7 +134,7 @@ def main(flg_tst):
     all_disp += [2.382]
     all_lines += [['ArI','HgI','KrI','NeI','XeI']]
     fidxs += [-1]
-    scores += [dict(rms=0.12, nxfit=40, nmatch=40)]
+    scores += [dict(rms=0.12, nxfit=40, nmatch=40)]  # Failing for semi-brute
 
     # Kastb 600 grism
     names += ['KASTb_600_standard']
@@ -141,6 +153,16 @@ def main(flg_tst):
     all_disp += [2.345]
     fidxs += [0]
     scores += [dict(rms=0.1, nxfit=20, nmatch=20)]
+
+    # DEIMOS 830G grating (blue)
+    names += ['DEIMOS_830g_blue']
+    src_files += ['deimos_830G_b_PYPIT.json']
+    all_lines += [['ArI','NeI','KrI','XeI']]
+    all_wvcen += [7440.]
+    all_disp += [0.468]
+    fidxs += [0]
+    scores += [dict(rms=0.05, nxfit=30, nmatch=40)]
+
 
     # Run it
     sv_grade = [] # for the end, just in case
@@ -162,7 +184,7 @@ def main(flg_tst):
 
 # Test
 if __name__ == '__main__':
-    flg_tst = 1   # Run em all with semi-brute
-    #flg_tst = 2   # Run em all with general
+    #flg_tst = 1   # Run em all with semi-brute
+    flg_tst = 2   # Run em all with general
 
     main(flg_tst)

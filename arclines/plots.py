@@ -145,7 +145,7 @@ def show_source(src_dict, line_lists, outfile, title=None, path=None, clobber=Fa
         ax_spec.set_xlim(0., len(arc_spec))
         if qq==1:
             ax_spec.set_yscale("log", nonposy='clip')
-            ax_spec.set_ylim(mn_yline/2., 5*ymax)
+            ax_spec.set_ylim(mn_yline/10., 5*ymax)
         else:
             ax_spec.set_ylim(ymin, ymax*1.3)
         if qq == 0:
@@ -163,7 +163,24 @@ def show_source(src_dict, line_lists, outfile, title=None, path=None, clobber=Fa
     print("Wrote {:s}".format(outfile))
     return
 
+
 def match_qa(arc_spec, tcent, line_list, IDs, scores, outfile, title=None, path=None):
+    """
+    Parameters
+    ----------
+    arc_spec
+    tcent
+    line_list
+    IDs
+    scores
+    outfile
+    title
+    path
+
+    Returns
+    -------
+
+    """
 
 
     # Plot
@@ -181,7 +198,9 @@ def match_qa(arc_spec, tcent, line_list, IDs, scores, outfile, title=None, path=
     mn_yline = 1e9
 
     # Standard IDs
-    clrs = dict(Perf='green', Good='blue', Ok='orange')
+    clrs = dict(Perf='green', Good='blue', Ok='orange',
+                Perfect='green')
+    clrs['Very Good'] = 'blue'
     for kk, score in enumerate(scores):
         x = tcent[kk]
         # Color
@@ -193,7 +212,7 @@ def match_qa(arc_spec, tcent, line_list, IDs, scores, outfile, title=None, path=
         mn_yline = min(mn_yline, yline)
         # Tick mark
         ax_spec.plot([x,x], [yline+ysep*0.25, yline+ysep], '-', color=clr)
-        if score in ['Perf', 'Good', 'Ok']:
+        if score in ['Perf', 'Good', 'Ok', 'Perfect', 'Very Good']:
             # Label
             imin = np.argmin(np.abs(line_list['wave']-IDs[kk]))
             row = line_list[imin]

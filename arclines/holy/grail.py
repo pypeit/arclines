@@ -287,9 +287,9 @@ def semi_brute(spec, lines, wv_cen, disp, min_ampl=300.,
     return best_dict, final_fit
 
 
-def general(spec, lines, siglev=20., min_ampl=300.,
+def general(spec, lines, min_ampl=300.,
             outroot=None, debug=False, do_fit=True, verbose=False,
-            fit_parm=None, min_nmatch=0, lowest_ampl=200.):
+            fit_parm=None, lowest_ampl=200.):
     """
     Parameters
     ----------
@@ -328,6 +328,7 @@ def general(spec, lines, siglev=20., min_ampl=300.,
     # Lines
     all_tcent, cut_tcent, icut = arch_utils.arc_lines_from_spec(spec, min_ampl=min_ampl)
     use_tcent = all_tcent.copy()
+    #use_tcent = cut_tcent.copy()  # min_ampl is having not effect at present
 
     # Best
     best_dict = dict(nmatch=0, ibest=-1, bwv=0., min_ampl=min_ampl)
