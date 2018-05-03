@@ -20,6 +20,7 @@ def parser(options=None):
     parser.add_argument("-s", "--skip_stop", default=False, action='store_true', help="Skip warning stop?")
     parser.add_argument("--no_unknowns", default=False, action='store_true', help="Skip UNKNOWNS in source")
     parser.add_argument("--plots", default=False, action='store_true', help="Create plots?")
+    parser.add_argument("-m", "--min_unk_ampl", default=0., type=float, help="Minimum amplitude for UNKNOWNs")
 
     if options is None:
         args = parser.parse_args()
@@ -61,6 +62,7 @@ def main(args=None):
 
     # Load sources
     sources = arcl_io.load_source_table()
+    # Grab the last one (which we will add)
     source = sources[-1]
 
     # Load line lists
@@ -71,7 +73,6 @@ def main(args=None):
             llist_dict[ion] = arcl_io.load_line_list(ion, use_ion=True)
         except IOError:
             print("No linelist found for ion={:s}.  Will create one".format(ion))
-
 
     # IDs
     print("=============================================================")
@@ -95,7 +96,7 @@ def main(args=None):
     print("Working on adding Unknowns from source {:s}".format(source['File']))
     print("=============================================================")
     if not pargs.no_unknowns:
-        unknwns = build_lists.source_to_unknowns(source, write=pargs.write)
+        unknwns = build_lists.source_to_unknowns(source, min_ampl=pargs.min_unk_ampl, write=pargs.write)
         unknwns.remove_column('line_flag')
     else:
         unknwns = None
@@ -115,7 +116,8 @@ def main(args=None):
     outfile = source['File'][:iext]+'.pdf'
     title = source['File'][:iext]
     #
-    arcl_plots.show_source(src_dict, line_lists, outfile, title=title, clobber=True)
+    arcl_plots.show_source(src_dict, line_lists, outfile, title=title, clobber=True,
+                           min_unk_ampl=pargs.min_unk_ampl)
 
 
 if __name__ == '__main__':
