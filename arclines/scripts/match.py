@@ -21,9 +21,11 @@ def parser(options=None):
     parser.add_argument("disp", type=float, help="Accurate dispersion (Ang/pix)")
     parser.add_argument("lines", type=str, help="Comma separated list of lamps")
     parser.add_argument("--outroot", type=str, help="Root filename for plot, IDs")
-    parser.add_argument("--min_ampl", type=float, help="Minimum amplitude for line analysis [default: 100.]")
+    parser.add_argument("--min_ampl", default=100., type=float, help="Minimum amplitude for line analysis [default: 100.]")
     parser.add_argument("--debug", default=False, action='store_true', help="Debug")
     parser.add_argument("--fit", default=False, action='store_true', help="Fit the lines?")
+    parser.add_argument("--brute", default=False, action='store_true', help="Use semi_brute?")
+    parser.add_argument("--show_spec", default=False, action='store_true', help="Show the input spectrum?")
 
     if options is None:
         args = parser.parse_args()
@@ -43,12 +45,13 @@ def main(pargs=None):
 
     """
     import numpy as np
+    from matplotlib import pyplot as plt
 
     from linetools import utils as ltu
 
     from arclines import io as arcl_io
     from arclines.holy import utils as arch_utils
-    from arclines.holy.grail import semi_brute
+    from arclines.holy.grail import general, semi_brute
     from arclines.holy import patterns as arch_patt
     from arclines.holy import fitting as arch_fit
 
@@ -56,17 +59,30 @@ def main(pargs=None):
     if pargs.outroot is None:
         pargs.outroot = 'tmp_matches'
     # Defaults
-    min_ampl = (pargs.min_ampl if (pargs.min_ampl is not None) else 100.)
 
     # Load spectrum
     spec = arcl_io.load_spectrum(pargs.spectrum)
+    if pargs.show_spec:
+        plt.clf()
+        ax = plt.gca()
+        ax.plot(spec)
+        plt.show()
+
     # Arc lines
     lines = pargs.lines.split(',')
 
     # Call brute
-    best_dict, final_fit = semi_brute(spec, lines, pargs.wvcen, pargs.disp, min_ampl=min_ampl,
-               debug=pargs.debug, outroot=pargs.outroot, do_fit=pargs.fit,
-               verbose=True)
+    if pargs.brute:
+        best_dict, final_fit = semi_brute(spec, lines, pargs.wvcen, pargs.disp, min_ampl=pargs.min_ampl,
+                                      debug=pargs.debug, outroot=pargs.outroot, do_fit=pargs.fit,
+                                          verbose=True)
+        #best_dict, final_fit = grail.semi_brute(spec, lines, wv_cen, disp, siglev=siglev,
+        #                                        min_ampl=min_ampl, min_nmatch=min_match, outroot=outroot)
+    else:
+        pdb.set_trace()
+        #best_dict, final_fit = general(spec, lines, pargs.wvcen, pargs.disp, min_ampl=min_ampl,
+        #       debug=pargs.debug, outroot=pargs.outroot, do_fit=pargs.fit,
+        #       verbose=True)
     if pargs.debug:
         pdb.set_trace()
 
