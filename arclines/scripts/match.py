@@ -79,10 +79,8 @@ def main(pargs=None):
         #best_dict, final_fit = grail.semi_brute(spec, lines, wv_cen, disp, siglev=siglev,
         #                                        min_ampl=min_ampl, min_nmatch=min_match, outroot=outroot)
     else:
-        pdb.set_trace()
-        #best_dict, final_fit = general(spec, lines, pargs.wvcen, pargs.disp, min_ampl=min_ampl,
-        #       debug=pargs.debug, outroot=pargs.outroot, do_fit=pargs.fit,
-        #       verbose=True)
+        best_dict, final_fit = general(spec, lines, do_fit=pargs.fit, verbose=True, debug=pargs.debug,
+                                             min_ampl=pargs.min_ampl, outroot=pargs.outroot)
     if pargs.debug:
         pdb.set_trace()
 
