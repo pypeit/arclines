@@ -86,14 +86,6 @@ def main(flg_tst):
     fidxs = [0]
     scores = [dict(rms=0.13, nxfit=13, nmatch=10)]
 
-    # DEIMOS 830G grating (red)
-    names += ['DEIMOS_830g_red']
-    src_files += ['deimos_830G_r_PYPIT.json']
-    all_lines += [['ArI','NeI','KrI','XeI']]
-    all_wvcen += [9300.]
-    all_disp += [0.467]
-    fidxs += [0]
-    scores += [dict(rms=0.05, nxfit=12, nmatch=15)]
 
     '''
     # LRISb off-center
@@ -163,6 +155,23 @@ def main(flg_tst):
     fidxs += [0]
     scores += [dict(rms=0.05, nxfit=30, nmatch=40)]
 
+    # DEIMOS 830G grating (red)
+    names += ['DEIMOS_830g_red']
+    src_files += ['deimos_830G_r_PYPIT.json']
+    all_lines += [['ArI','NeI','KrI','XeI']]
+    all_wvcen += [9300.]
+    all_disp += [0.467]
+    fidxs += [0]
+    scores += [dict(rms=0.05, nxfit=15, nmatch=50)]
+
+    # DEIMOS 1200G grating (red)
+    names += ['DEIMOS_1200g']
+    src_files += ['deimos_1200G_r_PYPIT.json']  # Original PYPIT format
+    all_lines += [['ArI','NeI','KrI','XeI']]
+    all_wvcen += [9400.]
+    all_disp += [0.32]
+    fidxs += [0]
+    scores += [dict(rms=0.05, nxfit=14, nmatch=40)]
 
     # Run it
     sv_grade = [] # for the end, just in case
