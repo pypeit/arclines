@@ -62,8 +62,7 @@ def match_quad_to_list(spec_lines, line_list, wv_guess, dwv_guess,
     return possible_matches
 
 
-def run_quad_match(tcent, twave, llist_wv, disp, swv_uncertainty=250.,
-                   pix_tol=1.):
+def run_quad_match(tcent, twave, llist_wv, disp, swv_uncertainty=250., pix_tol=1.):
     """
     Parameters
     ----------
@@ -104,6 +103,7 @@ def run_quad_match(tcent, twave, llist_wv, disp, swv_uncertainty=250.,
             widx = int(np.round(tcent[idx]))
             wvmnx = [twave[widx]-swv_uncertainty, twave[widx]+swv_uncertainty]
             # Run
+            #import pdb; pdb.set_trace()
             matches = match_quad_to_list(spec_lines, llist_wv, wvmnx, disp, tol=pix_tol)
             # Save
             for match in matches:
@@ -149,6 +149,7 @@ def scan_for_matches(wvcen, disp, npix, cut_tcent, wvdata, best_dict=None,
         best_dict = dict(nmatch=0, ibest=-1, bwv=0.)
 
     # Scan on wv_cen
+    #wvcens = [9400.] # DEBUGGING
     for ss,iwv_cen in enumerate(wvcens):
         # Wavelength array
         wave = iwv_cen + (np.arange(npix) - npix/2.)*disp
@@ -167,6 +168,7 @@ def scan_for_matches(wvcen, disp, npix, cut_tcent, wvdata, best_dict=None,
             else:
                 IDs.append(0.)
         ngd_match = np.sum(mask)
+        #import pdb; pdb.set_trace()
         # Update in place
         if ngd_match > best_dict['nmatch']:
             best_dict['nmatch'] = ngd_match

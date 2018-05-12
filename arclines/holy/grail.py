@@ -96,9 +96,9 @@ def basic(spec, lines, wv_cen, disp, siglev=20., min_ampl=300.,
     return status, ngd_match, match_idx, scores, final_fit
 
 
-def semi_brute(spec, lines, wv_cen, disp, siglev=20., min_ampl=300.,
+def semi_brute(spec, lines, wv_cen, disp, min_ampl=300.,
                outroot=None, debug=False, do_fit=True, verbose=False,
-               fit_parm=None, min_nmatch=0, lowest_ampl=200.):
+               fit_parm=None, min_nmatch=3, lowest_ampl=200.):
     """
     Parameters
     ----------
@@ -136,7 +136,8 @@ def semi_brute(spec, lines, wv_cen, disp, siglev=20., min_ampl=300.,
     all_tcent, cut_tcent, icut = arch_utils.arc_lines_from_spec(spec, min_ampl=min_ampl)
 
     # Best
-    best_dict = dict(nmatch=0, ibest=-1, bwv=0., min_ampl=min_ampl)
+    best_dict = dict(nmatch=0, ibest=-1, bwv=0., min_ampl=min_ampl, unknown=False,
+                     pix_tol=1, ampl=min_ampl)
 
     # 3 things to fiddle:
     #  pix_tol -- higher for fewer lines  1/2
@@ -144,7 +145,8 @@ def semi_brute(spec, lines, wv_cen, disp, siglev=20., min_ampl=300.,
     #  scoring -- weaken for more lines ??
 
     # Loop on unknowns
-    for unknown in [False, True]:
+    #for unknown in [False, True]:
+    for unknown in [True]:
         if unknown:
             tot_list = vstack([line_lists,unknwns])
         else:
@@ -160,6 +162,7 @@ def semi_brute(spec, lines, wv_cen, disp, siglev=20., min_ampl=300.,
                                       best_dict=best_dict, pix_tol=pix_tol)
             # Lower minimum amplitude
             ampl = min_ampl
+            #pdb.set_trace()
             while(best_dict['nmatch'] < min_nmatch):
                 ampl /= 2.
                 if ampl < lowest_ampl:
@@ -168,11 +171,14 @@ def semi_brute(spec, lines, wv_cen, disp, siglev=20., min_ampl=300.,
                 arch_patt.scan_for_matches(wv_cen, disp, npix, cut_tcent, wvdata,
                                        best_dict=best_dict, pix_tol=pix_tol, ampl=ampl)
 
+        #if debug:
+        #    pdb.set_trace()
         # Save linelist?
         if best_dict['nmatch'] > sav_nmatch:
             best_dict['line_list'] = tot_list.copy()
             best_dict['unknown'] = unknown
-            best_dict['ampl'] = unknown
+            best_dict['ampl'] = ampl
+            best_dict['pix_tol'] = pix_tol
 
     # Try to pick up some extras by turning off/on unknowns
     if best_dict['unknown']:
@@ -281,9 +287,9 @@ def semi_brute(spec, lines, wv_cen, disp, siglev=20., min_ampl=300.,
     return best_dict, final_fit
 
 
-def general(spec, lines, siglev=20., min_ampl=300.,
+def general(spec, lines, min_ampl=300.,
             outroot=None, debug=False, do_fit=True, verbose=False,
-            fit_parm=None, min_nmatch=0, lowest_ampl=200.):
+            fit_parm=None, lowest_ampl=200.):
     """
     Parameters
     ----------
@@ -322,6 +328,7 @@ def general(spec, lines, siglev=20., min_ampl=300.,
     # Lines
     all_tcent, cut_tcent, icut = arch_utils.arc_lines_from_spec(spec, min_ampl=min_ampl)
     use_tcent = all_tcent.copy()
+    #use_tcent = cut_tcent.copy()  # min_ampl is having not effect at present
 
     # Best
     best_dict = dict(nmatch=0, ibest=-1, bwv=0., min_ampl=min_ampl)

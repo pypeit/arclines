@@ -232,12 +232,14 @@ def source_to_line_lists(source, write=False, llist_dict=None):
     # Return
     return llist_dict
 
-def source_to_unknowns(source, write=False, verbose=True):
+def source_to_unknowns(source, write=False, verbose=True, min_ampl=0.):
     """
     Parameters
     ----------
     source
     write
+    min_ampl : float (optional)
+      Minimum amplitude for a new UNKNOWN
 
     Returns
     -------
@@ -247,6 +249,11 @@ def source_to_unknowns(source, write=False, verbose=True):
     # Load
     src_dict = load_source.load(source)
     U_lines = src_dict['U_lines']
+
+    # Cut on amplitude
+    print("Cutting UNKNOWNs on min_ampl")
+    U_lines = U_lines[U_lines['amplitude'] > min_ampl]
+    src_dict['U_lines'] = U_lines
 
     # UNKNWN lines
     if U_lines is None:

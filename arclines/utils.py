@@ -33,6 +33,7 @@ def unique_ions(source, src_dict=None):
         uions = np.unique(src_dict['ID_lines']['ion'].data)
         for src_line in src_lines:
             if src_line not in uions.tolist():
+                pdb.set_trace()
                 raise ValueError("Line {:s} not found in ID_lines".format(src_line))
         return uions
     else:

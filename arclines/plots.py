@@ -17,22 +17,26 @@ import arclines
 plot_path = arclines.__path__[0]+'/data/plots/'
 
 
-def show_source(src_dict, line_lists, outfile, title=None, path=None, clobber=False):
+def show_source(src_dict, line_lists, outfile, title=None, path=None, clobber=False,
+                min_unk_ampl=0.):
     """ Plot of an input source for arclines
+
+    Color code:
+      blue = Good line
+      gray = previously used unknown
+      orange = new unknown
+      red = Unknown in good line list (this shouldn't happen)
+      green = ??
+      brown = Unused UNKNOWN
 
     Parameters
     ----------
-    arc_spec : ndarray
-      Arc spectrum
-    xIDs : ndarray or list
-      Pixel values of ID'd lines
-    IDs : ndarray or list
-      str array of ID labels
-    extras : dict, optional
-      x: list of x values
-      IDs: list of str labels
+    line_lists : Table
+      Existing line lists with the lamps of interest
     outfile : str
       Name of output file
+    min_unk_ampl : float (optional)
+      Cut on Amplitude for UNKNOWNs
     """
     # Path
     if path is None:
@@ -49,19 +53,19 @@ def show_source(src_dict, line_lists, outfile, title=None, path=None, clobber=Fa
 
     # In line_list?
     def chk_line_list(wave):
-        mtw = np.where(np.abs(line_lists['wave']-row['wave']) < 1e-3)[0]
-        if len(mtw) == 0:
-            return -1
+        mtw = np.where(np.abs(line_lists['wave']-wave) < 1e-3)[0]
+        if len(mtw) == 0: # Not in the line list
+            return 1
         elif len(mtw) != 1:
             pdb.set_trace()
         # Source used?
         if outfile[:iext] in line_lists['Source'][mtw[0]]:
             return 0
         else:
-            return 1
+            return 2
 
     # IDs
-    clrs = ['green', 'blue']  # Used, not used
+    clrs = ['green', 'red', 'blue']  # Used, not used
     if src_dict['xIDs'] is not None:
         xIDs = src_dict['xIDs']
         IDlbls, IDclrs = [], []
@@ -75,19 +79,26 @@ def show_source(src_dict, line_lists, outfile, title=None, path=None, clobber=Fa
 
     # Unknowns
     U_lines = src_dict['U_lines']
-    clrs = ['red', 'orange']  # Used, not used
+    clrs = ['red', 'orange', 'green']  # Used, not used, ??
     if U_lines is not None:
         # Match to NIST
         mask, wv_match = arcl_utils.vette_unkwn_against_lists(U_lines, src_dict['uions'])
-        extras = dict(x=src_dict['epix'], IDs=[], clrs=[])
+        xepix = src_dict['epix']
+        extras = dict(x=[], IDs=[], clrs=[])
         for ss,row in enumerate(U_lines):
+            # Check against minimum amplitude
+            if row['amplitude'] < min_unk_ampl:
+                continue
+            # x
+            extras['x'].append(xepix[ss])
+            # Lbl
             if mask[ss] == 2:  # Matched to NIST
                 lbl = '{:.4f}'.format(row['wave']) + ' [{:s}]'.format(wv_match[ss])
             else:
                 lbl = 'UNKNWN {:.4f}'.format(row['wave'])
             extras['IDs'].append(lbl)
-            # Color
-            if mask[ss] == 0: # In Line list
+            # Color me
+            if mask[ss] == 0: # In current line list
                 extras['clrs'].append('gray')
             elif mask[ss] == -1: # Assuming Unknowns skipped
                 extras['clrs'].append('brown')
@@ -134,7 +145,7 @@ def show_source(src_dict, line_lists, outfile, title=None, path=None, clobber=Fa
         ax_spec.set_xlim(0., len(arc_spec))
         if qq==1:
             ax_spec.set_yscale("log", nonposy='clip')
-            ax_spec.set_ylim(mn_yline/2., 5*ymax)
+            ax_spec.set_ylim(mn_yline/10., 5*ymax)
         else:
             ax_spec.set_ylim(ymin, ymax*1.3)
         if qq == 0:
@@ -152,7 +163,24 @@ def show_source(src_dict, line_lists, outfile, title=None, path=None, clobber=Fa
     print("Wrote {:s}".format(outfile))
     return
 
+
 def match_qa(arc_spec, tcent, line_list, IDs, scores, outfile, title=None, path=None):
+    """
+    Parameters
+    ----------
+    arc_spec
+    tcent
+    line_list
+    IDs
+    scores
+    outfile
+    title
+    path
+
+    Returns
+    -------
+
+    """
 
 
     # Plot
@@ -170,7 +198,9 @@ def match_qa(arc_spec, tcent, line_list, IDs, scores, outfile, title=None, path=
     mn_yline = 1e9
 
     # Standard IDs
-    clrs = dict(Perf='green', Good='blue', Ok='orange')
+    clrs = dict(Perf='green', Good='blue', Ok='orange',
+                Perfect='green')
+    clrs['Very Good'] = 'blue'
     for kk, score in enumerate(scores):
         x = tcent[kk]
         # Color
@@ -182,7 +212,7 @@ def match_qa(arc_spec, tcent, line_list, IDs, scores, outfile, title=None, path=
         mn_yline = min(mn_yline, yline)
         # Tick mark
         ax_spec.plot([x,x], [yline+ysep*0.25, yline+ysep], '-', color=clr)
-        if score in ['Perf', 'Good', 'Ok']:
+        if score in ['Perf', 'Good', 'Ok', 'Perfect', 'Very Good']:
             # Label
             imin = np.argmin(np.abs(line_list['wave']-IDs[kk]))
             row = line_list[imin]

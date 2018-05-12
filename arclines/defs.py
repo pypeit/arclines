@@ -21,7 +21,7 @@ def instruments():
     instr_dict['LRISb'] = 2**1
     instr_dict['Kastb'] = 2**2
     instr_dict['Kastr'] = 2**3
-    #instr_dict['ISIS'] = 2**3
+    instr_dict['DEIMOS'] = 2**4
     #
     return instr_dict
 

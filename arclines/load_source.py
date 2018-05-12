@@ -40,6 +40,8 @@ def load(source, **kwargs):
     # Load
     if format == 'PYPIT1':
         src_dict = load_pypit(1, src_file, ions, **kwargs)
+    if format == 'PYPIT2':
+        src_dict = load_pypit(2, src_file, ions, **kwargs)
     elif format == 'LRDX1':
         src_dict = load_low_redux(1, src_file, ions, wvmnx=wvmnx, **kwargs)
     else:
@@ -56,7 +58,8 @@ def load_pypit(version, src_file, ions, plot=False, **kwargs):
     ----------
     version : int
       Flag indicating version of PYPIT output
-      1 : JSON format from PYPIT v1
+      1 : JSON format from PYPIT v1 -- Before May 2018
+      2 : JSON format from PYPIT v2 -- May 2018 (JSON file has one key per slit/order)
     src_file : str
     plot : bool, optional
       Generate a plot?
@@ -70,15 +73,21 @@ def load_pypit(version, src_file, ions, plot=False, **kwargs):
 
     """
     # Load
-    if version != 1:
+    if version not in [1,2]:
         raise IOError("Unimplemented version!")
     with open(src_path+src_file,'r') as f:
         pypit_fit = json.load(f)
 
+    if version == 2:
+        print("Taking the first slit in your file;  You will need to code to get another one")
+        pypit_fit = pypit_fit['0']
+
     npix = len(pypit_fit['spec'])
     # ID lines -- Assumed in NIST if from PYPIT
-    ions = np.array(pypit_fit['ions'],
-                    dtype='S{:d}'.format(str_len_dict['ion']))
+    #  Need to avoid dumb byte's here..
+    #  The following line may only work with Python3
+    #    and should be 'S{:d}' for Python 2
+    ions = np.array(pypit_fit['ions'], dtype='U{:d}'.format(str_len_dict['ion']))
     ID_lines = Table()
     ID_lines['ion'] = ions
     ID_lines['wave'] = pypit_fit['yfit']
