@@ -22,7 +22,8 @@ def tst_holy(name, spec_file, lines, wv_cen, disp, score, fidx, test='semi_brute
 
     # Favored parameters (should match those in the defaults)
     siglev=20.
-    min_ampl=1000.
+    #min_ampl=1000.
+    min_ampl=200.
     min_match = 10
 
     # Load spectrum
@@ -87,8 +88,8 @@ def main(flg_tst):
     names += ['NIRSPEC_1']
     src_files += ['nirspec1_sky.ascii']
     all_lines += [['OH']]
-    all_wvcen += [10000.]
-    all_disp += [2.109]
+    all_wvcen += [10500.]
+    all_disp += [2.09]
     fidxs += [0]
     scores += [dict(rms=0.13, nxfit=13, nmatch=10)]
 
@@ -197,8 +198,8 @@ def main(flg_tst):
         grade, best_dict, final_fit = tst_holy(name, src_file, lines, wvcen, disp, score, fidx,
                                                test=test)
         sv_grade.append(grade)
-        #if '900' in name:
-        #    pdb.set_trace()
+        if 'NIRSPEC' in name:
+            pdb.set_trace()
 
     # Report it
     print('==============================================================')
@@ -208,7 +209,7 @@ def main(flg_tst):
 
 # Test
 if __name__ == '__main__':
-    flg_tst = 1   # Run em all with semi-brute
-    #flg_tst = 2   # Run em all with general
+    #flg_tst = 1   # Run em all with semi-brute
+    flg_tst = 2   # Run em all with general
 
     main(flg_tst)
