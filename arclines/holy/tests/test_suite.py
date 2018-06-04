@@ -198,8 +198,8 @@ def main(flg_tst):
         grade, best_dict, final_fit = tst_holy(name, src_file, lines, wvcen, disp, score, fidx,
                                                test=test)
         sv_grade.append(grade)
-        if 'NIRSPEC' in name:
-            pdb.set_trace()
+        #if 'NIRSPEC' in name:
+        #    pdb.set_trace()
 
     # Report it
     print('==============================================================')
