@@ -89,7 +89,7 @@ def load_line_list(line_file, add_path=False, use_ion=False, NIST=False):
                     except ValueError:
                         reli.append(0.)
         line_list.remove_column('Rel.')
-        line_list['Rel.'] = reli
+        line_list['RelInt'] = reli
         #
         gdrows = line_list['Observed'] > 0.  # Eliminate dummy lines
         line_list = line_list[gdrows]
