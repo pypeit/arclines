@@ -46,7 +46,7 @@ def lines():
     line_dict['CdI'] = 2**5
     line_dict['ZnI'] = 2**6
     line_dict['HeI'] = 2**7
-    line_dict['OH'] = 2**8
+    line_dict['OH_R24000'] = 2**8
     #
     return line_dict
 

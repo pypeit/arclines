@@ -447,8 +447,9 @@ def general(spec, lines, min_ampl=300.,
     # Fit
     final_fit = None
     if do_fit:
+        # Good lines = NIST or OH
+        good_lines = np.any([line_lists['NIST']>0, line_lists['ion'] == 'OH'], axis=0)
         #
-        NIST_lines = line_lists['NIST'] > 0
         ifit = np.where(best_dict['mask'])[0]
         if outroot is not None:
             plot_fil = outroot+'_fit.pdf'
@@ -457,7 +458,7 @@ def general(spec, lines, min_ampl=300.,
         # Purge UNKNOWNS from ifit
         imsk = np.array([True]*len(ifit))
         for kk, idwv in enumerate(np.array(best_dict['IDs'])[ifit]):
-            if np.min(np.abs(line_lists['wave'][NIST_lines]-idwv)) > 0.01:
+            if np.min(np.abs(line_lists['wave'][good_lines]-idwv)) > 0.01:
                 imsk[kk] = False
         ifit = ifit[imsk]
         # Allow for weaker lines in the fit
@@ -471,7 +472,7 @@ def general(spec, lines, min_ampl=300.,
             use_tcent = np.concatenate([use_tcent, np.array(add_weak)])
         # Fit
         final_fit = arch_fit.iterative_fitting(spec, use_tcent, ifit,
-                                               np.array(best_dict['IDs'])[ifit], line_lists[NIST_lines],
+                                               np.array(best_dict['IDs'])[ifit], line_lists[good_lines],
                                                best_dict['bdisp'], plot_fil=plot_fil, verbose=verbose,
                                                aparm=fit_parm)
         if plot_fil is not None:

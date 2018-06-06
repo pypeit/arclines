@@ -87,7 +87,7 @@ def main(flg_tst):
     # NIRSPEC 1
     names += ['NIRSPEC_1']
     src_files += ['nirspec1_sky.ascii']
-    all_lines += [['OH']]
+    all_lines += [['OH_R24000']]
     all_wvcen += [10500.]
     all_disp += [2.09]
     fidxs += [0]

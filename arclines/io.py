@@ -143,6 +143,7 @@ def load_line_lists(lines, unknown=False, skip=False, all=False, NIST=False):
             line_file = line_path+'{:s}_lines.dat'.format(line)
         if not os.path.isfile(line_file):
             if not skip:
+                import pdb; pdb.set_trace()
                 raise IOError("Input line {:s} is not included in arclines".format(line))
         else:
             lists.append(load_line_list(line_file, NIST=NIST))
