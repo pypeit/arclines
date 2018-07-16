@@ -22,6 +22,7 @@ def instruments():
     instr_dict['Kastb'] = 2**2
     instr_dict['Kastr'] = 2**3
     instr_dict['DEIMOS'] = 2**4
+    instr_dict['NIRSPEC'] = 2**5
     #
     return instr_dict
 
@@ -45,6 +46,7 @@ def lines():
     line_dict['CdI'] = 2**5
     line_dict['ZnI'] = 2**6
     line_dict['HeI'] = 2**7
+    line_dict['OH_R24000'] = 2**8
     #
     return line_dict
 

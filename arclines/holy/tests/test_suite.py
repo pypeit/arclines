@@ -13,7 +13,7 @@ from pkg_resources import resource_filename
 
 from arclines.holy import grail
 
-#from xastropy.xutils import xdebug as xdb
+from astropy.table import Table
 
 test_arc_path = resource_filename('arclines','/data/test_arcs/')
 outdir = 'TEST_SUITE_OUTPUT/'
@@ -22,7 +22,8 @@ def tst_holy(name, spec_file, lines, wv_cen, disp, score, fidx, test='semi_brute
 
     # Favored parameters (should match those in the defaults)
     siglev=20.
-    min_ampl=1000.
+    #min_ampl=1000.
+    min_ampl=200.
     min_match = 10
 
     # Load spectrum
@@ -38,6 +39,9 @@ def tst_holy(name, spec_file, lines, wv_cen, disp, score, fidx, test='semi_brute
     elif exten == 'hdf5':
         hdf = h5py.File(test_arc_path+spec_file,'r')
         spec = hdf['arcs/{:d}/spec'.format(fidx)].value
+    elif exten == 'ascii':
+        tbl = Table.read(test_arc_path+spec_file, format='ascii')
+        spec = tbl['flux'].data
     else:
         pdb.set_trace()
 
@@ -77,14 +81,26 @@ def main(flg_tst):
     elif flg_tst in [2]:
         test = 'general'
 
+    # Init
+    names, src_files, all_lines, all_wvcen, all_disp, fidxs, scores = [], [], [], [], [], [], []
+
+    # NIRSPEC 1
+    names += ['NIRSPEC_1']
+    src_files += ['nirspec1_sky.ascii']
+    all_lines += [['OH_R24000']]
+    all_wvcen += [10500.]
+    all_disp += [2.09]
+    fidxs += [0]
+    scores += [dict(rms=0.13, nxfit=13, nmatch=10)]
+
     # LRISb 600/4000 with the longslit
-    names = ['LRISb_600_4000_longslit']
-    src_files = ['lrisb_600_4000_PYPIT.json']
-    all_lines = [['CdI','HgI','ZnI']]
-    all_wvcen = [4400.]
-    all_disp = [1.26]
-    fidxs = [0]
-    scores = [dict(rms=0.13, nxfit=13, nmatch=10)]
+    names += ['LRISb_600_4000_longslit']
+    src_files += ['lrisb_600_4000_PYPIT.json']
+    all_lines += [['CdI','HgI','ZnI']]
+    all_wvcen += [4400.]
+    all_disp += [1.26]
+    fidxs += [0]
+    scores += [dict(rms=0.13, nxfit=13, nmatch=10)]
 
 
     '''
@@ -182,7 +198,7 @@ def main(flg_tst):
         grade, best_dict, final_fit = tst_holy(name, src_file, lines, wvcen, disp, score, fidx,
                                                test=test)
         sv_grade.append(grade)
-        #if '900' in name:
+        #if 'NIRSPEC' in name:
         #    pdb.set_trace()
 
     # Report it
