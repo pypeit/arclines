@@ -40,7 +40,7 @@ def load(source, **kwargs):
     # Load
     if format == 'PYPIT1':
         src_dict = load_pypit(1, src_file, ions, **kwargs)
-    if format == 'PYPIT2':
+    elif format == 'PYPIT2':
         src_dict = load_pypit(2, src_file, ions, **kwargs)
     elif format == 'LRDX1':
         src_dict = load_low_redux(1, src_file, ions, wvmnx=wvmnx, **kwargs)
