@@ -10,3 +10,4 @@
 | GMOS_R400_blue_1_fit.json  | JXP    | 04-Oct-2018 | GMOS   | ArI,ArII,CuI        | 4100. | 5200. | PYPIT1 |
 | GMOS_R400_blue_38_fit.json | JXP    | 04-Oct-2018 | GMOS   | ArI,ArII,CuI        | 5600. | 6900. | PYPIT1 |
 | GMOS_R400_blue_15_fit.json | JXP    | 04-Oct-2018 | GMOS   | ArI,ArII,CuI        | 4970. | 6310. | PYPIT1 |
+| GMOS_R400_chip2_8_fit.json | JXP    | 05-Oct-2018 | GMOS   | ArI,ArII            | 7030. | 8370. | PYPIT1 |
